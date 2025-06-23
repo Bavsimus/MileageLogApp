@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 // Lütfen dosyanın en üstündeki mevcut main() fonksiyonunu bununla değiştirin.
 Future<void> main() async {
@@ -23,12 +24,27 @@ Future<void> main() async {
   runApp(MileageLogApp());
 }
 
+// Mevcut MileageLogApp widget'ınızı bununla değiştirin
 class MileageLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Mileage Log App',
       theme: ThemeData(primarySwatch: Colors.teal),
+
+      // --- YENİ EKLENEN SATIRLAR ---
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        const Locale('tr', 'TR'), // Türkçe desteği
+        // İsteğe bağlı olarak başka dilleri de ekleyebilirsiniz
+        // const Locale('en', 'US'), 
+      ],
+      // --- EKLEME BİTTİ ---
+
       home: NavigationRoot(),
     );
   }
