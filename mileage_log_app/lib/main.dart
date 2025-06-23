@@ -84,7 +84,6 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
     });
   }
 
-  // YENİ METOT: Veriyi hesaplar ve önizleme ekranına yönlendirir.
   // _TabloOlusturPageState sınıfının içindeki mevcut metodu bununla değiştirin.
 void _raporOlusturVeGoruntule() {
     final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
@@ -100,41 +99,47 @@ void _raporOlusturVeGoruntule() {
     for (final arac in seciliAraclar) {
       final List<List<dynamic>> aracSatirlari = [];
 
-      // --- DÜZELTME BURADA YAPILDI: KM Aralığı formatı daha güvenli hale getirildi ---
       final kmAralikParts = arac.kmAralik.split('-');
       int kmMin = 0;
       int kmMax = 0;
 
-      // İlk değeri al
       if (kmAralikParts.isNotEmpty) {
         kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
       }
-
-      // Eğer ikinci bir değer varsa onu max olarak al, yoksa min değerini max olarak da kullan.
       if (kmAralikParts.length > 1) {
         kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
       } else {
         kmMax = kmMin;
       }
-      
-      // Kullanıcı yanlışlıkla 100-90 gibi girerse diye kontrol
       if (kmMin > kmMax) {
         final temp = kmMin;
         kmMin = kmMax;
         kmMax = temp;
       }
-      // --- DÜZELTME SONU ---
-
+      
       double baslangicKm = arac.gunBasiKm;
       final gunSayisi = DateTime(now.year, now.month + 1, 0).day;
 
       for (int day = 1; day <= gunSayisi; day++) {
         final tarih = DateTime(now.year, now.month, day);
-        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
-          continue;
-        }
 
-        // Eğer min ve max aynıysa, yapılan km sabit olur. Farklıysa aralarından rastgele seçer.
+        // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+        // Eğer gün hafta sonuysa ve araç çalışmıyorsa...
+        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
+          // Boş bir satır ekliyoruz.
+          aracSatirlari.add([
+            '${tarih.day}.${tarih.month}.${tarih.year}', // Tarih
+            '-',  // Gün Başı
+            '-',  // Gün Sonu
+            0,    // Yapılan KM
+            'Hafta Sonu Tatil' // Güzergah
+          ]);
+          // Bu özel satırı ekledikten sonra, günün geri kalan işlemlerini atla.
+          continue; 
+        }
+        // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+
+        // Normal iş günleri için standart işlem devam ediyor.
         final yapilanKm = (kmMax - kmMin == 0) ? kmMin : Random().nextInt(kmMax - kmMin + 1) + kmMin;
         final gunSonuKm = baslangicKm + yapilanKm;
 
@@ -145,7 +150,10 @@ void _raporOlusturVeGoruntule() {
           yapilanKm,
           arac.guzergah
         ]);
-
+        
+        // Bir sonraki günün başlangıç kilometresi, bu günün sonu olmalı.
+        // Bu satır sadece çalışılan günler için işletilir, bu sayede Pazartesi gününün
+        // başlangıç kilometresi Cuma gününün bitişi olur.
         baslangicKm = gunSonuKm;
       }
       raporVerisi[arac] = aracSatirlari;
