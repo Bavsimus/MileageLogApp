@@ -139,6 +139,8 @@ class _TablolarPageState extends State<TablolarPage> {
 
 // --- Navigasyon Çubuğu Güncellendi ---
 
+// Lütfen projenizdeki mevcut NavigationRoot sınıfını ve onun State'ini bununla değiştirin.
+
 class NavigationRoot extends StatefulWidget {
   @override
   _NavigationRootState createState() => _NavigationRootState();
@@ -146,31 +148,63 @@ class NavigationRoot extends StatefulWidget {
 
 class _NavigationRootState extends State<NavigationRoot> {
   int _currentIndex = 0;
+  late PageController _pageController; // Sayfa yöneticisini ekliyoruz
 
-  // Sayfa listesine yeni TablolarPage eklendi
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex); // Yöneticiyi başlatıyoruz
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose(); // Hafıza sızıntılarını önlemek için yöneticiyi temizliyoruz
+    super.dispose();
+  }
+
+  // Sayfalar listesi aynı kalıyor
   final List<Widget> _pages = [
     AraclarPage(),
     TabloOlusturPage(),
-    TablolarPage(), // YENİ EKLENDİ
+    TablolarPage(),
     GuzergahAyarPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
+      // GÖVDE (BODY) DEĞİŞİKLİĞİ: Artık bir PageView kullanıyoruz
+      body: PageView(
+        controller: _pageController,
+        children: _pages,
+        // Sayfa kaydırıldığında indeksi ve alttaki barı günceller
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
+
+      // NAVİGASYON BARI DEĞİŞİKLİĞİ
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        // Navigasyon elemanlarının renginin sabit kalması için eklendi
+        // Alttaki bir butona basıldığında...
+        onTap: (index) {
+          // Sayfaya animasyonlu bir şekilde kaydırır
+          _pageController.animateToPage(
+            index,
+            duration: Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          );
+        },
         type: BottomNavigationBarType.fixed, 
         items: const [
           BottomNavigationBarItem(
               icon: Icon(Icons.directions_car), label: 'Araçlar'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.add_chart), label: 'Tablo Oluştur'), // İsim ve ikon değişti
+              icon: Icon(Icons.add_chart), label: 'Tablo Oluştur'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.folder_copy), label: 'Tablolar'), // YENİ EKLENDİ
+              icon: Icon(Icons.folder_copy), label: 'Tablolar'),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Güzergah'),
         ],
       ),
