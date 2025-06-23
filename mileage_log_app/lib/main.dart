@@ -8,8 +8,20 @@ import 'package:open_filex/open_filex.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() => runApp(MileageLogApp());
+// Lütfen dosyanın en üstündeki mevcut main() fonksiyonunu bununla değiştirin.
+Future<void> main() async {
+  // Flutter binding'lerinin ve eklenti kanallarının hazır olduğundan emin olmamızı sağlar.
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Türkçe yerelleştirme verilerini uygulama başlamadan önce güvenle yüklüyoruz.
+  await initializeDateFormatting('tr_TR', null);
+  
+  // Her şey hazır olduktan sonra uygulamayı çalıştırıyoruz.
+  runApp(MileageLogApp());
+}
 
 class MileageLogApp extends StatelessWidget {
   @override
@@ -711,11 +723,15 @@ class TabloOlusturPage extends StatefulWidget {
 class _TabloOlusturPageState extends State<TabloOlusturPage> {
   List<AracModel> tumAraclar = [];
   Set<int> seciliIndexler = {};
+  
+  // YENİ STATE: Rapor oluşturulacak ayı tutar, varsayılan olarak şimdiki aydır.
+  DateTime _seciliTarih = DateTime.now();
 
   @override
   void initState() {
-    super.initState();
-    _loadAraclar();
+   super.initState();
+   _loadAraclar();
+  // initializeDateFormatting('tr_TR', null); // <-- BU SATIRI SİLİN
   }
 
   Future<void> _loadAraclar() async {
@@ -726,7 +742,25 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
     });
   }
 
-  void _raporOlusturVeGoruntule() {
+  // YENİ METOT: Kullanıcının ay ve yıl seçmesini sağlayan takvimi gösterir.
+  Future<void> _aySeciciGoster(BuildContext context) async {
+    final DateTime? secilen = await showDatePicker(
+      context: context,
+      initialDate: _seciliTarih,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2040),
+      locale: const Locale('tr', 'TR'), // Takvimi Türkçe yapar
+      initialDatePickerMode: DatePickerMode.year, // Önce yıl seçimiyle başlar
+    );
+    if (secilen != null && secilen != _seciliTarih) {
+      setState(() {
+        _seciliTarih = secilen;
+      });
+    }
+  }
+
+  // METOT GÜNCELLENDİ: Artık parametre olarak seçilen tarihi alıyor.
+  void _raporOlusturVeGoruntule(DateTime secilenAy) {
     final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
     if (seciliAraclar.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -735,8 +769,8 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
     }
 
     final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
-    final now = DateTime.now();
-
+    
+    // Değişiklik: 'now' yerine 'secilenAy' kullanılıyor.
     for (final arac in seciliAraclar) {
       final List<List<dynamic>> aracSatirlari = [];
       final kmAralikParts = arac.kmAralik.split('-');
@@ -758,17 +792,17 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
       }
       
       double baslangicKm = arac.gunBasiKm;
-      final gunSayisi = DateTime(now.year, now.month + 1, 0).day;
+      // Değişiklik: Ayın gün sayısı seçilen tarihe göre hesaplanıyor.
+      final gunSayisi = DateTime(secilenAy.year, secilenAy.month + 1, 0).day;
 
       for (int day = 1; day <= gunSayisi; day++) {
-        final tarih = DateTime(now.year, now.month, day);
+        // Değişiklik: Tarihler seçilen ay ve yıla göre oluşturuluyor.
+        final tarih = DateTime(secilenAy.year, secilenAy.month, day);
+        
         if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
           aracSatirlari.add([
             '${tarih.day}.${tarih.month}.${tarih.year}',
-            '-',
-            '-',
-            0,
-            'Hafta Sonu Tatil'
+            '-', '-', 0, 'Hafta Sonu Tatil'
           ]);
           continue; 
         }
@@ -826,11 +860,39 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
               },
             ),
           ),
+          // YENİ ARAYÜZ ELEMANLARI
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text("Rapor Ayı Seçimi:", style: Theme.of(context).textTheme.titleMedium),
+                SizedBox(height: 8),
+                OutlinedButton.icon(
+                  icon: Icon(Icons.calendar_today),
+                  label: Text(
+                    // Tarihi "Haziran 2025" formatında göster
+                    DateFormat.yMMMM('tr_TR').format(_seciliTarih),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () => _aySeciciGoster(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
-                onPressed: _raporOlusturVeGoruntule,
-                child: Text("Seçili Araçlar İçin Rapor Oluştur ve Görüntüle")),
+                // Değişiklik: Buton artık seçili tarihi fonksiyona gönderiyor.
+                onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
+                child: Text("Seçili Ay İçin Rapor Oluştur ve Görüntüle"),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+            ),
           ),
         ],
       ),
