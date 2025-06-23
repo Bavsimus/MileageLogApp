@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:data_table_2/data_table_2.dart'; // Yeni eklendi
-import 'package:share_plus/share_plus.dart';    // Yeni eklendi
+import 'package:data_table_2/data_table_2.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart'; // Yeni eklendi
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
-
-// Ana uygulama ve veri modelleri aynı kalıyor...
 
 void main() => runApp(MileageLogApp());
 
@@ -22,6 +21,280 @@ class MileageLogApp extends StatelessWidget {
     );
   }
 }
+
+// --- YENİ EKLENEN SAYFA: Kaydedilmiş Tabloları Listeler ---
+
+class TablolarPage extends StatefulWidget {
+  @override
+  _TablolarPageState createState() => _TablolarPageState();
+}
+
+class _TablolarPageState extends State<TablolarPage> {
+  List<File> _savedFiles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedReports();
+  }
+
+  Future<void> _loadSavedReports() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final directory = await getApplicationDocumentsDirectory();
+    final files = directory.listSync();
+    setState(() {
+      _savedFiles = files
+          .where((file) => file.path.endsWith('.xlsx'))
+          .map((file) => File(file.path))
+          .toList();
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _openFile(String path) async {
+    final result = await OpenFilex.open(path);
+    if (result.type != ResultType.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bu dosyayı açacak bir uygulama bulunamadı: ${result.message}')),
+      );
+    }
+  }
+
+  Future<void> _deleteFile(File file) async {
+    try {
+      await file.delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_getFileName(file.path)} silindi.')),
+      );
+      // Listeyi yenile
+      _loadSavedReports();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dosya silinirken bir hata oluştu.')),
+      );
+    }
+  }
+  
+  String _getFileName(String path) {
+    return path.split('/').last;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Kaydedilmiş Raporlar"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadSavedReports,
+            tooltip: 'Listeyi Yenile',
+          )
+        ],
+      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _savedFiles.isEmpty
+              ? Center(
+                  child: Text(
+                    "Henüz kaydedilmiş bir rapor bulunmuyor.",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: _savedFiles.length,
+                  itemBuilder: (context, index) {
+                    final file = _savedFiles[index];
+                    final fileName = _getFileName(file.path);
+
+                    return Dismissible(
+                      key: Key(fileName),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        _deleteFile(file);
+                      },
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Icon(Icons.delete, color: Colors.white),
+                      ),
+                      child: ListTile(
+                        leading: Icon(Icons.description, color: Theme.of(context).primaryColor),
+                        title: Text(fileName),
+                        subtitle: Text("Açmak için dokunun, silmek için sola kaydırın."),
+                        onTap: () => _openFile(file.path),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+
+// --- Navigasyon Çubuğu Güncellendi ---
+
+class NavigationRoot extends StatefulWidget {
+  @override
+  _NavigationRootState createState() => _NavigationRootState();
+}
+
+class _NavigationRootState extends State<NavigationRoot> {
+  int _currentIndex = 0;
+
+  // Sayfa listesine yeni TablolarPage eklendi
+  final List<Widget> _pages = [
+    AraclarPage(),
+    TabloOlusturPage(),
+    TablolarPage(), // YENİ EKLENDİ
+    GuzergahAyarPage(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        // Navigasyon elemanlarının renginin sabit kalması için eklendi
+        type: BottomNavigationBarType.fixed, 
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.directions_car), label: 'Araçlar'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.add_chart), label: 'Tablo Oluştur'), // İsim ve ikon değişti
+          BottomNavigationBarItem(
+              icon: Icon(Icons.folder_copy), label: 'Tablolar'), // YENİ EKLENDİ
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Güzergah'),
+        ],
+      ),
+    );
+  }
+}
+
+
+// --- Rapor Önizleme Sayfasındaki Kaydetme Mantığı Değiştirildi ---
+
+class RaporOnizlemePage extends StatelessWidget {
+  final Map<AracModel, List<List<dynamic>>> raporVerisi;
+
+  const RaporOnizlemePage({Key? key, required this.raporVerisi}) : super(key: key);
+
+  // Metodun adı ve işlevi güncellendi
+  Future<void> _kaydetVePaylas(BuildContext context) async {
+    final excel = Excel.createExcel();
+
+    for (var entry in raporVerisi.entries) {
+      final arac = entry.key;
+      final veriler = entry.value;
+      final sheet = excel['${arac.plaka.replaceAll(' ', '_')}']; 
+      
+      sheet.appendRow([
+        TextCellValue('Tarih'), TextCellValue('Gün Başı'), TextCellValue('Gün Sonu'),
+        TextCellValue('Yapılan KM'), TextCellValue('Güzergah')
+      ]);
+
+      for (final satir in veriler) {
+         sheet.appendRow([
+            TextCellValue(satir[0].toString()),
+            DoubleCellValue(double.tryParse(satir[1].toString()) ?? 0),
+            DoubleCellValue(double.tryParse(satir[2].toString()) ?? 0),
+            IntCellValue(int.tryParse(satir[3].toString()) ?? 0),
+            TextCellValue(satir[4].toString()),
+         ]);
+      }
+    }
+
+    final now = DateTime.now();
+    // Daha benzersiz bir dosya adı için zaman damgası eklendi
+    final fileName = 'AracRaporu_${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}.xlsx';
+    
+    // Dosya artık geçici klasöre değil, kalıcı belgeler klasörüne kaydediliyor
+    final directory = await getApplicationDocumentsDirectory();
+    final path = '${directory.path}/$fileName';
+
+    final fileBytes = excel.encode();
+    if (fileBytes != null) {
+      final file = File(path);
+      await file.writeAsBytes(fileBytes);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Rapor, "Tablolar" sekmesine kaydedildi: $fileName')),
+      );
+
+      // Paylaşım menüsünü aç
+      await Share.shareXFiles([XFile(path)], text: 'Araç Raporu');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Rapor Önizleme"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.save_alt), // İkon değişti
+            onPressed: () => _kaydetVePaylas(context),
+            tooltip: 'Kaydet ve Paylaş',
+          ),
+        ],
+      ),
+      body: ListView.builder( // ... geri kalanı aynı
+        padding: const EdgeInsets.all(16.0),
+        itemCount: raporVerisi.keys.length,
+        itemBuilder: (context, index) {
+          final arac = raporVerisi.keys.elementAt(index);
+          final dataRows = raporVerisi[arac]!;
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 20),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Araç: ${arac.plaka}', style: Theme.of(context).textTheme.titleLarge),
+                  SizedBox(height: 10),
+                  SizedBox(
+                    height: 400,
+                    child: DataTable2(
+                      columnSpacing: 12, horizontalMargin: 12, minWidth: 600,
+                      columns: [
+                        DataColumn2(label: Text('Tarih'), size: ColumnSize.L),
+                        DataColumn2(label: Text('Gün Başı'), numeric: true),
+                        DataColumn2(label: Text('Gün Sonu'), numeric: true),
+                        DataColumn2(label: Text('Yapılan KM'), numeric: true),
+                        DataColumn2(label: Text('Güzergah'), size: ColumnSize.L),
+                      ],
+                      rows: dataRows.map((row) {
+                        return DataRow(cells: [
+                          DataCell(Text(row[0].toString())),
+                          DataCell(Text(row[1].toString())),
+                          DataCell(Text(row[2].toString())),
+                          DataCell(Text(row[3].toString())),
+                          DataCell(Text(row[4].toString())),
+                        ]);
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Diğer sınıflar değişmeden kalıyor, aşağıya ekliyorum.
 
 class AracModel {
   final String plaka;
@@ -58,275 +331,6 @@ class AracModel {
   factory AracModel.fromJson(String source) =>
       AracModel.fromMap(json.decode(source));
 }
-
-
-// --- Tablo Oluşturma Sayfası Güncellendi ---
-class TabloOlusturPage extends StatefulWidget {
-  @override
-  _TabloOlusturPageState createState() => _TabloOlusturPageState();
-}
-
-class _TabloOlusturPageState extends State<TabloOlusturPage> {
-  List<AracModel> tumAraclar = [];
-  Set<int> seciliIndexler = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAraclar();
-  }
-
-  Future<void> _loadAraclar() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
-    setState(() {
-      tumAraclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
-    });
-  }
-
-  // _TabloOlusturPageState sınıfının içindeki mevcut metodu bununla değiştirin.
-void _raporOlusturVeGoruntule() {
-    final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
-    if (seciliAraclar.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lütfen en az bir araç seçin.")));
-      return;
-    }
-
-    final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
-    final now = DateTime.now();
-
-    for (final arac in seciliAraclar) {
-      final List<List<dynamic>> aracSatirlari = [];
-
-      final kmAralikParts = arac.kmAralik.split('-');
-      int kmMin = 0;
-      int kmMax = 0;
-
-      if (kmAralikParts.isNotEmpty) {
-        kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
-      }
-      if (kmAralikParts.length > 1) {
-        kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
-      } else {
-        kmMax = kmMin;
-      }
-      if (kmMin > kmMax) {
-        final temp = kmMin;
-        kmMin = kmMax;
-        kmMax = temp;
-      }
-      
-      double baslangicKm = arac.gunBasiKm;
-      final gunSayisi = DateTime(now.year, now.month + 1, 0).day;
-
-      for (int day = 1; day <= gunSayisi; day++) {
-        final tarih = DateTime(now.year, now.month, day);
-
-        // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
-        // Eğer gün hafta sonuysa ve araç çalışmıyorsa...
-        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
-          // Boş bir satır ekliyoruz.
-          aracSatirlari.add([
-            '${tarih.day}.${tarih.month}.${tarih.year}', // Tarih
-            '-',  // Gün Başı
-            '-',  // Gün Sonu
-            0,    // Yapılan KM
-            'Hafta Sonu Tatil' // Güzergah
-          ]);
-          // Bu özel satırı ekledikten sonra, günün geri kalan işlemlerini atla.
-          continue; 
-        }
-        // --- DEĞİŞİKLİK BURADA BİTİYOR ---
-
-        // Normal iş günleri için standart işlem devam ediyor.
-        final yapilanKm = (kmMax - kmMin == 0) ? kmMin : Random().nextInt(kmMax - kmMin + 1) + kmMin;
-        final gunSonuKm = baslangicKm + yapilanKm;
-
-        aracSatirlari.add([
-          '${tarih.day}.${tarih.month}.${tarih.year}',
-          baslangicKm.toStringAsFixed(2),
-          gunSonuKm.toStringAsFixed(2),
-          yapilanKm,
-          arac.guzergah
-        ]);
-        
-        // Bir sonraki günün başlangıç kilometresi, bu günün sonu olmalı.
-        // Bu satır sadece çalışılan günler için işletilir, bu sayede Pazartesi gününün
-        // başlangıç kilometresi Cuma gününün bitişi olur.
-        baslangicKm = gunSonuKm;
-      }
-      raporVerisi[arac] = aracSatirlari;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Tablo Oluştur")),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: tumAraclar.length,
-              itemBuilder: (context, index) {
-                final arac = tumAraclar[index];
-                return CheckboxListTile(
-                  value: seciliIndexler.contains(index),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) {
-                        seciliIndexler.add(index);
-                      } else {
-                        seciliIndexler.remove(index);
-                      }
-                    });
-                  },
-                  title: Text(arac.plaka),
-                  subtitle: Text(
-                      '${arac.kmAralik} | ${arac.haftasonuDurumu} | ${arac.guzergah}'),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            // Butonun işlevi değiştirildi
-            child: ElevatedButton(
-                onPressed: _raporOlusturVeGoruntule,
-                child: Text("Seçili Araçlar İçin Rapor Oluştur ve Görüntüle")),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- YENİ EKRAN: Rapor Önizleme Sayfası ---
-// Lütfen projenizdeki mevcut RaporOnizlemePage sınıfını bununla değiştirin.
-
-class RaporOnizlemePage extends StatelessWidget {
-  final Map<AracModel, List<List<dynamic>>> raporVerisi;
-
-  const RaporOnizlemePage({Key? key, required this.raporVerisi}) : super(key: key);
-
-  Future<void> _paylas(BuildContext context) async {
-    final excel = Excel.createExcel();
-
-    for (var entry in raporVerisi.entries) {
-      final arac = entry.key;
-      final veriler = entry.value;
-      final sheet = excel['${arac.plaka.replaceAll(' ', '_')}']; 
-      
-      sheet.appendRow([
-        TextCellValue('Tarih'),
-        TextCellValue('Gün Başı'),
-        TextCellValue('Gün Sonu'),
-        TextCellValue('Yapılan KM'),
-        TextCellValue('Güzergah')
-      ]);
-
-      for (final satir in veriler) {
-         sheet.appendRow([
-            TextCellValue(satir[0].toString()),
-            DoubleCellValue(double.tryParse(satir[1].toString()) ?? 0),
-            DoubleCellValue(double.tryParse(satir[2].toString()) ?? 0),
-            IntCellValue(int.tryParse(satir[3].toString()) ?? 0),
-            TextCellValue(satir[4].toString()),
-         ]);
-      }
-    }
-
-    final now = DateTime.now();
-    final fileName = 'AracRaporu_${now.month}_${now.year}.xlsx';
-    final tempDir = await getTemporaryDirectory();
-    final path = '${tempDir.path}/$fileName';
-
-    final fileBytes = excel.encode();
-    if (fileBytes != null) {
-      final file = File(path);
-      await file.writeAsBytes(fileBytes);
-      
-      await Share.shareXFiles([XFile(path)], text: 'Araç Raporu');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Rapor Önizleme"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.share),
-            onPressed: () => _paylas(context),
-            tooltip: 'Excel Olarak Paylaş',
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: raporVerisi.keys.length,
-        itemBuilder: (context, index) {
-          final arac = raporVerisi.keys.elementAt(index);
-          final dataRows = raporVerisi[arac]!;
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 20),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Araç: ${arac.plaka}', 
-                    // --- DÜZELTME BURADA YAPILDI ---
-                    style: Theme.of(context).textTheme.titleLarge, 
-                  ),
-                  SizedBox(height: 10),
-                  SizedBox(
-                    height: 400,
-                    child: DataTable2(
-                      columnSpacing: 12,
-                      horizontalMargin: 12,
-                      minWidth: 600,
-                      columns: [
-                        DataColumn2(label: Text('Tarih'), size: ColumnSize.L),
-                        DataColumn2(label: Text('Gün Başı'), numeric: true),
-                        DataColumn2(label: Text('Gün Sonu'), numeric: true),
-                        DataColumn2(label: Text('Yapılan KM'), numeric: true),
-                        DataColumn2(label: Text('Güzergah'), size: ColumnSize.L),
-                      ],
-                      rows: dataRows.map((row) {
-                        return DataRow(cells: [
-                          DataCell(Text(row[0].toString())),
-                          DataCell(Text(row[1].toString())),
-                          DataCell(Text(row[2].toString())),
-                          DataCell(Text(row[3].toString())),
-                          DataCell(Text(row[4].toString())),
-                        ]);
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Diğer sayfalar (AraclarPage, GuzergahAyarPage, NavigationRoot) aynı kalabilir.
-// Okunabilirlik için aşağıya tekrar ekliyorum.
 
 class AraclarPage extends StatefulWidget {
   @override
@@ -492,6 +496,141 @@ class _AraclarPageState extends State<AraclarPage> {
   }
 }
 
+class TabloOlusturPage extends StatefulWidget {
+  @override
+  _TabloOlusturPageState createState() => _TabloOlusturPageState();
+}
+
+class _TabloOlusturPageState extends State<TabloOlusturPage> {
+  List<AracModel> tumAraclar = [];
+  Set<int> seciliIndexler = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAraclar();
+  }
+
+  Future<void> _loadAraclar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
+    setState(() {
+      tumAraclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+    });
+  }
+
+  void _raporOlusturVeGoruntule() {
+    final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
+    if (seciliAraclar.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lütfen en az bir araç seçin.")));
+      return;
+    }
+
+    final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
+    final now = DateTime.now();
+
+    for (final arac in seciliAraclar) {
+      final List<List<dynamic>> aracSatirlari = [];
+      final kmAralikParts = arac.kmAralik.split('-');
+      int kmMin = 0;
+      int kmMax = 0;
+
+      if (kmAralikParts.isNotEmpty) {
+        kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
+      }
+      if (kmAralikParts.length > 1) {
+        kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
+      } else {
+        kmMax = kmMin;
+      }
+      if (kmMin > kmMax) {
+        final temp = kmMin;
+        kmMin = kmMax;
+        kmMax = temp;
+      }
+      
+      double baslangicKm = arac.gunBasiKm;
+      final gunSayisi = DateTime(now.year, now.month + 1, 0).day;
+
+      for (int day = 1; day <= gunSayisi; day++) {
+        final tarih = DateTime(now.year, now.month, day);
+        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
+          aracSatirlari.add([
+            '${tarih.day}.${tarih.month}.${tarih.year}',
+            '-',
+            '-',
+            0,
+            'Hafta Sonu Tatil'
+          ]);
+          continue; 
+        }
+
+        final yapilanKm = (kmMax - kmMin == 0) ? kmMin : Random().nextInt(kmMax - kmMin + 1) + kmMin;
+        final gunSonuKm = baslangicKm + yapilanKm;
+
+        aracSatirlari.add([
+          '${tarih.day}.${tarih.month}.${tarih.year}',
+          baslangicKm.toStringAsFixed(2),
+          gunSonuKm.toStringAsFixed(2),
+          yapilanKm,
+          arac.guzergah
+        ]);
+        
+        baslangicKm = gunSonuKm;
+      }
+      raporVerisi[arac] = aracSatirlari;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Rapor Oluştur")),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: tumAraclar.length,
+              itemBuilder: (context, index) {
+                final arac = tumAraclar[index];
+                return CheckboxListTile(
+                  value: seciliIndexler.contains(index),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        seciliIndexler.add(index);
+                      } else {
+                        seciliIndexler.remove(index);
+                      }
+                    });
+                  },
+                  title: Text(arac.plaka),
+                  subtitle: Text(
+                      '${arac.kmAralik} | ${arac.haftasonuDurumu} | ${arac.guzergah}'),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+                onPressed: _raporOlusturVeGoruntule,
+                child: Text("Seçili Araçlar İçin Rapor Oluştur ve Görüntüle")),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class GuzergahAyarPage extends StatefulWidget {
   @override
   _GuzergahAyarPageState createState() => _GuzergahAyarPageState();
@@ -567,40 +706,6 @@ class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
             )
           ],
         ),
-      ),
-    );
-  }
-}
-
-
-class NavigationRoot extends StatefulWidget {
-  @override
-  _NavigationRootState createState() => _NavigationRootState();
-}
-
-class _NavigationRootState extends State<NavigationRoot> {
-  int _currentIndex = 0;
-
-  final List<Widget> _pages = [
-    AraclarPage(),
-    TabloOlusturPage(),
-    GuzergahAyarPage(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.directions_car), label: 'Araçlar'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.description), label: 'Tablo'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Güzergah'),
-        ],
       ),
     );
   }
