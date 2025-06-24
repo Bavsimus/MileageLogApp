@@ -60,6 +60,11 @@ class _NavigationRootState extends State<NavigationRoot> {
           ),
         ),
         CupertinoTabBar(
+          height: 60,
+          backgroundColor: CupertinoColors.tertiarySystemGroupedBackground,
+          border: Border(
+            top: BorderSide.none, // Üst çizgiyi kaldırır
+          ),
           currentIndex: _currentIndex,
           onTap: (index) {
             _pageController.animateToPage(
