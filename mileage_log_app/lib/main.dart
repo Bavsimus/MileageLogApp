@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excel/excel.dart';
@@ -5,53 +6,129 @@ import 'package:path_provider/path_provider.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
-import 'dart:io';
-import 'dart:convert';
-import 'dart:math';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'dart:math';
 
-// Lütfen dosyanın en üstündeki mevcut main() fonksiyonunu bununla değiştirin.
 Future<void> main() async {
-  // Flutter binding'lerinin ve eklenti kanallarının hazır olduğundan emin olmamızı sağlar.
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Türkçe yerelleştirme verilerini uygulama başlamadan önce güvenle yüklüyoruz.
   await initializeDateFormatting('tr_TR', null);
-  
-  // Her şey hazır olduktan sonra uygulamayı çalıştırıyoruz.
   runApp(MileageLogApp());
 }
 
-// Mevcut MileageLogApp widget'ınızı bununla değiştirin
 class MileageLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return CupertinoApp(
       title: 'Mileage Log App',
-      theme: ThemeData(primarySwatch: Colors.teal),
-
-      // --- YENİ EKLENEN SATIRLAR ---
+      debugShowCheckedModeBanner: false,
+      theme: CupertinoThemeData(
+        primaryColor: CupertinoColors.systemTeal,
+      ),
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: [
-        const Locale('tr', 'TR'), // Türkçe desteği
-        // İsteğe bağlı olarak başka dilleri de ekleyebilirsiniz
-        // const Locale('en', 'US'), 
+        const Locale('tr', 'TR'),
+        const Locale('en', 'US'),
       ],
-      // --- EKLEME BİTTİ ---
-
       home: NavigationRoot(),
     );
   }
 }
 
-// Sınıfların geri kalanı aynı kaldığı için kodun sonuna eklenmiştir.
-// Kodun tamamını aşağıda bulabilirsiniz.
+// Lütfen projenizdeki mevcut (Stateless) NavigationRoot'u 
+// aşağıdaki (Stateful) versiyonuyla değiştirin.
+
+class NavigationRoot extends StatefulWidget {
+  const NavigationRoot({super.key});
+
+  @override
+  State<NavigationRoot> createState() => _NavigationRootState();
+}
+
+class _NavigationRootState extends State<NavigationRoot> {
+  int _currentIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // Sayfalarımız aynı
+  final List<Widget> _pages = [
+    AraclarPage(),
+    TabloOlusturPage(),
+    TablolarPage(),
+    GuzergahAyarPage(),
+  ];
+
+  // _NavigationRootState sınıfının içindeki mevcut build metodunu bununla değiştirin.
+@override
+Widget build(BuildContext context) {
+  // CupertinoPageScaffold, sayfanın genel arkaplanını ve üst barını yönetir.
+  return CupertinoPageScaffold(
+    // Arka plan rengini belirliyoruz. Bu, sistemin temasına göre (açık/koyu)
+    // uygun bir arkaplan rengi seçer. Beyaz şeritleri bu renk dolduracak.
+    backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor,
+
+    // Dışarıdaki SafeArea'yı kaldırdık.
+    // İçerik artık doğrudan Scaffold'un çocuğu.
+    child: Column(
+      children: [
+        // Sayfaların görüneceği ve kaydırılacağı alan
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            children: _pages,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+          ),
+        ),
+        // Alttaki navigasyon barımız
+        // CupertinoTabBar, alttaki sistem çubuğu için gerekli boşluğu genellikle
+        // kendisi otomatik olarak ayarlar.
+        CupertinoTabBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          },
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.car_detailed), label: 'Araçlar'),
+            BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.add_circled), label: 'Tablo Oluştur'),
+            BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.folder_fill), label: 'Tablolar'),
+            BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.map_fill), label: 'Güzergah'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class AracModel {
   final String plaka;
@@ -89,8 +166,6 @@ class AracModel {
       AracModel.fromMap(json.decode(source));
 }
 
-
-// --- GÜNCELLENEN SINIF: AraclarPage ---
 class AraclarPage extends StatefulWidget {
   @override
   _AraclarPageState createState() => _AraclarPageState();
@@ -167,7 +242,6 @@ class _AraclarPageState extends State<AraclarPage> {
       plakaController.clear();
       kmBaslangicController.clear();
       kmAralikController.clear();
-      // Düzenleme sonrası dropdown'ı varsayılana döndür
       if (guzergahlar.isNotEmpty) {
         seciliGuzergah = guzergahlar.first;
       }
@@ -178,7 +252,6 @@ class _AraclarPageState extends State<AraclarPage> {
     await prefs.setStringList('araclar', jsonList);
   }
   
-  // --- DÜZENLEME METODU GÜNCELLENDİ: Çökmeyi engeller ---
   void _editArac(int index){
     final arac = araclar[index];
     setState(() {
@@ -188,14 +261,10 @@ class _AraclarPageState extends State<AraclarPage> {
        kmAralikController.text = arac.kmAralik;
        haftasonuDurumu = arac.haftasonuDurumu;
 
-       // ÖNEMLİ KONTROL: Aracın güzergahı hala listede mevcut mu?
        if (guzergahlar.contains(arac.guzergah)) {
-         // Mevcutsa, onu seç.
          seciliGuzergah = arac.guzergah;
        } else {
-         // Mevcut değilse (silinmişse), çökmemesi için listenin ilk elemanını seç ve kullanıcıyı uyar.
          seciliGuzergah = guzergahlar.isNotEmpty ? guzergahlar.first : '';
-         // Kullanıcıya bilgi ver.
          WidgetsBinding.instance.addPostFrameCallback((_) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -274,178 +343,179 @@ class _AraclarPageState extends State<AraclarPage> {
   }
 }
 
-// --- GÜNCELLENEN SINIF: GuzergahAyarPage ---
-// Lütfen projenizdeki mevcut GuzergahAyarPage ve State'ini bununla değiştirin.
-
-class GuzergahAyarPage extends StatefulWidget {
+class TabloOlusturPage extends StatefulWidget {
   @override
-  _GuzergahAyarPageState createState() => _GuzergahAyarPageState();
+  _TabloOlusturPageState createState() => _TabloOlusturPageState();
 }
 
-class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
-  List<String> guzergahlar = [];
-  final TextEditingController guzergahEkleController = TextEditingController();
-
-  // Hangi güzergahın düzenlendiğini takip etmek için yeni bir state değişkeni
-  String? _duzenlenenGuzergah;
+class _TabloOlusturPageState extends State<TabloOlusturPage> {
+  List<AracModel> tumAraclar = [];
+  Set<int> seciliIndexler = {};
+  DateTime _seciliTarih = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadAraclar();
   }
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      guzergahlar = prefs.getStringList('guzergahlar') ?? [];
-    });
-  }
-
-  // Ekleme ve Güncelleme işlevlerini birleştiren yeni metot
-  Future<void> _kaydetVeyaGuncelle() async {
-    final yeniGuzergahAdi = guzergahEkleController.text.trim();
-    if (yeniGuzergahAdi.isEmpty) return;
-
-    final prefs = await SharedPreferences.getInstance();
-
-    if (_duzenlenenGuzergah != null) {
-      // --- GÜNCELLEME MODU ---
-      // Eğer değiştirilen isim zaten listede varsa (kendisi hariç) uyarı ver.
-      if (guzergahlar.contains(yeniGuzergahAdi) && yeniGuzergahAdi != _duzenlenenGuzergah) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu güzergah adı zaten mevcut.'), backgroundColor: Colors.red));
-        return;
-      }
-
-      // Bu güzergahı kullanan araçları bul ve onları da güncelle
-      final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
-      List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
-
-      for (int i = 0; i < araclar.length; i++) {
-        if (araclar[i].guzergah == _duzenlenenGuzergah) {
-          // Aracın güzergahını yeni adla değiştirerek yeni bir nesne oluştur
-          araclar[i] = AracModel(
-              plaka: araclar[i].plaka,
-              guzergah: yeniGuzergahAdi, // Değişen tek kısım
-              gunBasiKm: araclar[i].gunBasiKm,
-              kmAralik: araclar[i].kmAralik,
-              haftasonuDurumu: araclar[i].haftasonuDurumu);
-        }
-      }
-      // Güncellenmiş araç listesini kaydet
-      await prefs.setStringList('araclar', araclar.map((e) => e.toJson()).toList());
-      
-      // Güzergah listesini güncelle
-      final index = guzergahlar.indexOf(_duzenlenenGuzergah!);
-      if (index != -1) {
-        setState(() {
-          guzergahlar[index] = yeniGuzergahAdi;
-        });
-      }
-
-    } else {
-      // --- EKLEME MODU ---
-      if (guzergahlar.contains(yeniGuzergahAdi)) {
-         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu güzergah adı zaten mevcut.'), backgroundColor: Colors.red));
-        return;
-      }
-      setState(() {
-        guzergahlar.add(yeniGuzergahAdi);
-      });
-    }
-
-    // Değişiklikleri kaydet ve formu temizle
-    await prefs.setStringList('guzergahlar', guzergahlar);
-    setState(() {
-      guzergahEkleController.clear();
-      _duzenlenenGuzergah = null;
-    });
-  }
-  
-  // Düzenleme modunu başlatan metot
-  void _duzenlemeModunuBaslat(String guzergah) {
-    setState(() {
-      _duzenlenenGuzergah = guzergah;
-      guzergahEkleController.text = guzergah;
-    });
-  }
-
-  Future<void> _sil(String guzergahToDelete) async {
+  Future<void> _loadAraclar() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
-    final List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
-    final bool isRouteInUse = araclar.any((arac) => arac.guzergah == guzergahToDelete);
+    setState(() {
+      tumAraclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+    });
+  }
 
-    if (isRouteInUse) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Bu güzergah bir araç tarafından kullanıldığı için silinemez.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } else {
+  Future<void> _aySeciciGoster(BuildContext context) async {
+    final DateTime? secilen = await showDatePicker(
+      context: context,
+      initialDate: _seciliTarih,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2040),
+      locale: const Locale('tr', 'TR'),
+      initialDatePickerMode: DatePickerMode.year,
+    );
+    if (secilen != null && secilen != _seciliTarih) {
       setState(() {
-        guzergahlar.remove(guzergahToDelete);
+        _seciliTarih = secilen;
       });
-      await prefs.setStringList('guzergahlar', guzergahlar);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$guzergahToDelete" güzergahı silindi.')),
-      );
     }
+  }
+
+  void _raporOlusturVeGoruntule(DateTime secilenAy) {
+    final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
+    if (seciliAraclar.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lütfen en az bir araç seçin.")));
+      return;
+    }
+
+    final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
+    
+    for (final arac in seciliAraclar) {
+      final List<List<dynamic>> aracSatirlari = [];
+      final kmAralikParts = arac.kmAralik.split('-');
+      int kmMin = 0;
+      int kmMax = 0;
+
+      if (kmAralikParts.isNotEmpty) {
+        kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
+      }
+      if (kmAralikParts.length > 1) {
+        kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
+      } else {
+        kmMax = kmMin;
+      }
+      if (kmMin > kmMax) {
+        final temp = kmMin;
+        kmMin = kmMax;
+        kmMax = temp;
+      }
+      
+      double baslangicKm = arac.gunBasiKm;
+      final gunSayisi = DateTime(secilenAy.year, secilenAy.month + 1, 0).day;
+
+      for (int day = 1; day <= gunSayisi; day++) {
+        final tarih = DateTime(secilenAy.year, secilenAy.month, day);
+        
+        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
+          aracSatirlari.add([
+            '${tarih.day}.${tarih.month}.${tarih.year}',
+            '-', '-', 0, 'Hafta Sonu Tatil'
+          ]);
+          continue; 
+        }
+
+        final yapilanKm = (kmMax - kmMin == 0) ? kmMin : Random().nextInt(kmMax - kmMin + 1) + kmMin;
+        final gunSonuKm = baslangicKm + yapilanKm;
+
+        aracSatirlari.add([
+          '${tarih.day}.${tarih.month}.${tarih.year}',
+          baslangicKm.toStringAsFixed(2),
+          gunSonuKm.toStringAsFixed(2),
+          yapilanKm,
+          arac.guzergah
+        ]);
+        
+        baslangicKm = gunSonuKm;
+      }
+      raporVerisi[arac] = aracSatirlari;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Güzergah Ayarları')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: guzergahEkleController,
-              decoration: InputDecoration(
-                labelText: _duzenlenenGuzergah == null ? 'Yeni Güzergah' : 'Güzergahı Düzenle',
-                // Buton ikonu ve işlevi moda göre değişiyor
-                suffixIcon: IconButton(
-                  icon: Icon(_duzenlenenGuzergah == null ? Icons.add : Icons.check),
-                  onPressed: _kaydetVeyaGuncelle,
-                ),
-              ),
+      appBar: AppBar(title: Text("Rapor Oluştur")),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: tumAraclar.length,
+              itemBuilder: (context, index) {
+                final arac = tumAraclar[index];
+                return CheckboxListTile(
+                  value: seciliIndexler.contains(index),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        seciliIndexler.add(index);
+                      } else {
+                        seciliIndexler.remove(index);
+                      }
+                    });
+                  },
+                  title: Text(arac.plaka),
+                  subtitle: Text(
+                      '${arac.kmAralik} | ${arac.haftasonuDurumu} | ${arac.guzergah}'),
+                );
+              },
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: guzergahlar.length,
-                itemBuilder: (context, index) {
-                  final guzergah = guzergahlar[index];
-                  return ListTile(
-                    title: Text(guzergah),
-                    // Silme ve Düzenleme ikonları için bir Row eklendi
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.edit, color: Theme.of(context).primaryColor),
-                          onPressed: () => _duzenlemeModunuBaslat(guzergah),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _sil(guzergah),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            )
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text("Rapor Ayı Seçimi:", style: Theme.of(context).textTheme.titleMedium),
+                SizedBox(height: 8),
+                OutlinedButton.icon(
+                  icon: Icon(Icons.calendar_today),
+                  label: Text(
+                    DateFormat.yMMMM('tr_TR').format(_seciliTarih),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () => _aySeciciGoster(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+                onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
+                child: Text("Rapor Oluştur"),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 144),
+                ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
-// Geri kalan tüm sınıflar aynı. Okunabilirlik için aşağıya ekliyorum.
 
 class TablolarPage extends StatefulWidget {
   @override
@@ -558,65 +628,155 @@ class _TablolarPageState extends State<TablolarPage> {
   }
 }
 
-class NavigationRoot extends StatefulWidget {
+class GuzergahAyarPage extends StatefulWidget {
   @override
-  _NavigationRootState createState() => _NavigationRootState();
+  _GuzergahAyarPageState createState() => _GuzergahAyarPageState();
 }
 
-class _NavigationRootState extends State<NavigationRoot> {
-  int _currentIndex = 0;
-  late PageController _pageController;
+class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
+  List<String> guzergahlar = [];
+  final TextEditingController guzergahEkleController = TextEditingController();
+  String? _duzenlenenGuzergah;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _currentIndex);
+    _load();
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      guzergahlar = prefs.getStringList('guzergahlar') ?? [];
+    });
   }
 
-  final List<Widget> _pages = [
-    AraclarPage(),
-    TabloOlusturPage(),
-    TablolarPage(),
-    GuzergahAyarPage(),
-  ];
+  Future<void> _kaydetVeyaGuncelle() async {
+    final yeniGuzergahAdi = guzergahEkleController.text.trim();
+    if (yeniGuzergahAdi.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    if (_duzenlenenGuzergah != null) {
+      if (guzergahlar.contains(yeniGuzergahAdi) && yeniGuzergahAdi != _duzenlenenGuzergah) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu güzergah adı zaten mevcut.'), backgroundColor: Colors.red));
+        return;
+      }
+
+      final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
+      List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+
+      for (int i = 0; i < araclar.length; i++) {
+        if (araclar[i].guzergah == _duzenlenenGuzergah) {
+          araclar[i] = AracModel(
+              plaka: araclar[i].plaka,
+              guzergah: yeniGuzergahAdi,
+              gunBasiKm: araclar[i].gunBasiKm,
+              kmAralik: araclar[i].kmAralik,
+              haftasonuDurumu: araclar[i].haftasonuDurumu);
+        }
+      }
+      await prefs.setStringList('araclar', araclar.map((e) => e.toJson()).toList());
+      
+      final index = guzergahlar.indexOf(_duzenlenenGuzergah!);
+      if (index != -1) {
+        setState(() {
+          guzergahlar[index] = yeniGuzergahAdi;
+        });
+      }
+
+    } else {
+      if (guzergahlar.contains(yeniGuzergahAdi)) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu güzergah adı zaten mevcut.'), backgroundColor: Colors.red));
+        return;
+      }
+      setState(() {
+        guzergahlar.add(yeniGuzergahAdi);
+      });
+    }
+
+    await prefs.setStringList('guzergahlar', guzergahlar);
+    setState(() {
+      guzergahEkleController.clear();
+      _duzenlenenGuzergah = null;
+    });
+  }
+  
+  void _duzenlemeModunuBaslat(String guzergah) {
+    setState(() {
+      _duzenlenenGuzergah = guzergah;
+      guzergahEkleController.text = guzergah;
+    });
+  }
+
+  Future<void> _sil(String guzergahToDelete) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
+    final List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+    final bool isRouteInUse = araclar.any((arac) => arac.guzergah == guzergahToDelete);
+
+    if (isRouteInUse) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bu güzergah bir araç tarafından kullanıldığı için silinemez.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      setState(() {
+        guzergahlar.remove(guzergahToDelete);
+      });
+      await prefs.setStringList('guzergahlar', guzergahlar);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"$guzergahToDelete" güzergahı silindi.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        children: _pages,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          _pageController.animateToPage(
-            index,
-            duration: Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
-          );
-        },
-        type: BottomNavigationBarType.fixed, 
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.directions_car), label: 'Araçlar'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.add_chart), label: 'Tablo Oluştur'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.folder_copy), label: 'Tablolar'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Güzergah'),
-        ],
+      appBar: AppBar(title: Text('Güzergah Ayarları')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: guzergahEkleController,
+              decoration: InputDecoration(
+                labelText: _duzenlenenGuzergah == null ? 'Yeni Güzergah' : 'Güzergahı Düzenle',
+                suffixIcon: IconButton(
+                  icon: Icon(_duzenlenenGuzergah == null ? Icons.add : Icons.check),
+                  onPressed: _kaydetVeyaGuncelle,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: guzergahlar.length,
+                itemBuilder: (context, index) {
+                  final guzergah = guzergahlar[index];
+                  return ListTile(
+                    title: Text(guzergah),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.edit, color: Theme.of(context).primaryColor),
+                          onPressed: () => _duzenlemeModunuBaslat(guzergah),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _sil(guzergah),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -726,191 +886,6 @@ class RaporOnizlemePage extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class TabloOlusturPage extends StatefulWidget {
-  @override
-  _TabloOlusturPageState createState() => _TabloOlusturPageState();
-}
-
-class _TabloOlusturPageState extends State<TabloOlusturPage> {
-  List<AracModel> tumAraclar = [];
-  Set<int> seciliIndexler = {};
-  
-  // YENİ STATE: Rapor oluşturulacak ayı tutar, varsayılan olarak şimdiki aydır.
-  DateTime _seciliTarih = DateTime.now();
-
-  @override
-  void initState() {
-   super.initState();
-   _loadAraclar();
-  // initializeDateFormatting('tr_TR', null); // <-- BU SATIRI SİLİN
-  }
-
-  Future<void> _loadAraclar() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
-    setState(() {
-      tumAraclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
-    });
-  }
-
-  // YENİ METOT: Kullanıcının ay ve yıl seçmesini sağlayan takvimi gösterir.
-  Future<void> _aySeciciGoster(BuildContext context) async {
-    final DateTime? secilen = await showDatePicker(
-      context: context,
-      initialDate: _seciliTarih,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2040),
-      locale: const Locale('tr', 'TR'), // Takvimi Türkçe yapar
-      initialDatePickerMode: DatePickerMode.year, // Önce yıl seçimiyle başlar
-    );
-    if (secilen != null && secilen != _seciliTarih) {
-      setState(() {
-        _seciliTarih = secilen;
-      });
-    }
-  }
-
-  // METOT GÜNCELLENDİ: Artık parametre olarak seçilen tarihi alıyor.
-  void _raporOlusturVeGoruntule(DateTime secilenAy) {
-    final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
-    if (seciliAraclar.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lütfen en az bir araç seçin.")));
-      return;
-    }
-
-    final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
-    
-    // Değişiklik: 'now' yerine 'secilenAy' kullanılıyor.
-    for (final arac in seciliAraclar) {
-      final List<List<dynamic>> aracSatirlari = [];
-      final kmAralikParts = arac.kmAralik.split('-');
-      int kmMin = 0;
-      int kmMax = 0;
-
-      if (kmAralikParts.isNotEmpty) {
-        kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
-      }
-      if (kmAralikParts.length > 1) {
-        kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
-      } else {
-        kmMax = kmMin;
-      }
-      if (kmMin > kmMax) {
-        final temp = kmMin;
-        kmMin = kmMax;
-        kmMax = temp;
-      }
-      
-      double baslangicKm = arac.gunBasiKm;
-      // Değişiklik: Ayın gün sayısı seçilen tarihe göre hesaplanıyor.
-      final gunSayisi = DateTime(secilenAy.year, secilenAy.month + 1, 0).day;
-
-      for (int day = 1; day <= gunSayisi; day++) {
-        // Değişiklik: Tarihler seçilen ay ve yıla göre oluşturuluyor.
-        final tarih = DateTime(secilenAy.year, secilenAy.month, day);
-        
-        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
-          aracSatirlari.add([
-            '${tarih.day}.${tarih.month}.${tarih.year}',
-            '-', '-', 0, 'Hafta Sonu Tatil'
-          ]);
-          continue; 
-        }
-
-        final yapilanKm = (kmMax - kmMin == 0) ? kmMin : Random().nextInt(kmMax - kmMin + 1) + kmMin;
-        final gunSonuKm = baslangicKm + yapilanKm;
-
-        aracSatirlari.add([
-          '${tarih.day}.${tarih.month}.${tarih.year}',
-          baslangicKm.toStringAsFixed(2),
-          gunSonuKm.toStringAsFixed(2),
-          yapilanKm,
-          arac.guzergah
-        ]);
-        
-        baslangicKm = gunSonuKm;
-      }
-      raporVerisi[arac] = aracSatirlari;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Rapor Oluştur")),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: tumAraclar.length,
-              itemBuilder: (context, index) {
-                final arac = tumAraclar[index];
-                return CheckboxListTile(
-                  value: seciliIndexler.contains(index),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) {
-                        seciliIndexler.add(index);
-                      } else {
-                        seciliIndexler.remove(index);
-                      }
-                    });
-                  },
-                  title: Text(arac.plaka),
-                  subtitle: Text(
-                      '${arac.kmAralik} | ${arac.haftasonuDurumu} | ${arac.guzergah}'),
-                );
-              },
-            ),
-          ),
-          // YENİ ARAYÜZ ELEMANLARI
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text("Rapor Ayı Seçimi:", style: Theme.of(context).textTheme.titleMedium),
-                SizedBox(height: 8),
-                OutlinedButton.icon(
-                  icon: Icon(Icons.calendar_today),
-                  label: Text(
-                    // Tarihi "Haziran 2025" formatında göster
-                    DateFormat.yMMMM('tr_TR').format(_seciliTarih),
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () => _aySeciciGoster(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-                // Değişiklik: Buton artık seçili tarihi fonksiyona gönderiyor.
-                onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
-                child: Text("Seçili Ay İçin Rapor Oluştur ve Görüntüle"),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                ),
-            ),
-          ),
-        ],
       ),
     );
   }
