@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border ; 
 import 'package:path_provider/path_provider.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:share_plus/share_plus.dart';
@@ -26,6 +26,7 @@ class MileageLogApp extends StatelessWidget {
       title: 'Mileage Log App',
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
+        scaffoldBackgroundColor: CupertinoColors.systemGrey6,
         primaryColor: CupertinoColors.systemTeal,
       ),
       localizationsDelegates: [
@@ -52,6 +53,8 @@ class NavigationRoot extends StatefulWidget {
   State<NavigationRoot> createState() => _NavigationRootState();
 }
 
+// Mevcut _NavigationRootState sınıfını bununla tamamen değiştir.
+
 class _NavigationRootState extends State<NavigationRoot> {
   int _currentIndex = 0;
   late PageController _pageController;
@@ -68,7 +71,13 @@ class _NavigationRootState extends State<NavigationRoot> {
     super.dispose();
   }
 
-  // Sayfalarımız aynı
+  final List<String> _pageTitles = [
+    'Araçlarım',
+    'Rapor Oluştur',
+    'Kaydedilmiş Raporlar',
+    'Güzergah Ayarları'
+  ];
+
   final List<Widget> _pages = [
     AraclarPage(),
     TabloOlusturPage(),
@@ -77,19 +86,22 @@ class _NavigationRootState extends State<NavigationRoot> {
   ];
 
   // _NavigationRootState sınıfının içindeki mevcut build metodunu bununla değiştirin.
+// _NavigationRootState sınıfının içindeki mevcut build metodunu bununla değiştir.
 @override
 Widget build(BuildContext context) {
-  // CupertinoPageScaffold, sayfanın genel arkaplanını ve üst barını yönetir.
-  return CupertinoPageScaffold(
-    // Arka plan rengini belirliyoruz. Bu, sistemin temasına göre (açık/koyu)
-    // uygun bir arkaplan rengi seçer. Beyaz şeritleri bu renk dolduracak.
-    backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor,
+  // Sekme verilerini (ikon ve başlık) bir liste olarak tanımlayalım.
+  // Bu, kodu daha yönetilebilir kılar.
+  final List<Map<String, dynamic>> tabItems = [
+    {'icon': CupertinoIcons.car_detailed, 'label': 'Araçlar'},
+    {'icon': CupertinoIcons.add_circled, 'label': 'Tablo Oluştur'},
+    {'icon': CupertinoIcons.folder_fill, 'label': 'Tablolar'},
+    {'icon': CupertinoIcons.map_fill, 'label': 'Güzergah'},
+  ];
 
-    // Dışarıdaki SafeArea'yı kaldırdık.
-    // İçerik artık doğrudan Scaffold'un çocuğu.
+  return CupertinoPageScaffold(
+    backgroundColor: CupertinoColors.systemGrey6,
     child: Column(
       children: [
-        // Sayfaların görüneceği ve kaydırılacağı alan
         Expanded(
           child: PageView(
             controller: _pageController,
@@ -101,9 +113,6 @@ Widget build(BuildContext context) {
             },
           ),
         ),
-        // Alttaki navigasyon barımız
-        // CupertinoTabBar, alttaki sistem çubuğu için gerekli boşluğu genellikle
-        // kendisi otomatik olarak ayarlar.
         CupertinoTabBar(
           currentIndex: _currentIndex,
           onTap: (index) {
@@ -113,21 +122,26 @@ Widget build(BuildContext context) {
               curve: Curves.easeInOut,
             );
           },
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.car_detailed), label: 'Araçlar'),
-            BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.add_circled), label: 'Tablo Oluştur'),
-            BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.folder_fill), label: 'Tablolar'),
-            BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.map_fill), label: 'Güzergah'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+          
+          // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+          // 'items' listesini artık sabit bir liste olarak değil, dinamik olarak oluşturuyoruz.
+          items: tabItems.asMap().entries.map((entry) {
+            int index = entry.key;
+            Map<String, dynamic> item = entry.value;
+
+            return BottomNavigationBarItem(
+              icon: Icon(item['icon']),
+              // Koşullu ifade: Eğer bu sekmenin indeksi, seçili olan indekse eşitse
+              // label'ı göster, değilse boş bir string ata (gösterme).
+              label: index == _currentIndex ? item['label'] : '',
+            );
+          }).toList(), // .map() sonucunu bir listeye çeviriyoruz.
+          // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+        ),
+      ],
+    ),
+  );
+}
 }
 
 class AracModel {
@@ -166,6 +180,149 @@ class AracModel {
       AracModel.fromMap(json.decode(source));
 }
 
+// Mevcut AracKarti widget'ını bununla değiştirin.
+class AracKarti extends StatelessWidget {
+  final AracModel arac;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const AracKarti({
+    super.key,
+    required this.arac,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Kartın dışına taşma olacağı için, karta biraz boşluk vermek amacıyla bir dış Container kullanıyoruz.
+    return Container(
+      margin: const EdgeInsets.only(top: 30.0, bottom: 8.0, left: 16.0, right: 16.0),
+      child: Stack(
+        // clipBehavior.none, çocukların Stack sınırlarının dışına taşmasına izin verir.
+        clipBehavior: Clip.none,
+        children: [
+          // 1. Katman: Arka Plan Kartı
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemBackground,
+              borderRadius: BorderRadius.circular(24.0),
+            ),
+            child: Row(
+              children: [
+                // Sol Taraf: Bilgiler ve Buton
+                Expanded(
+                  flex: 6,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Plaka yazısı solda kalıyor
+                        Text(
+                          arac.plaka,
+                          style: CupertinoTheme.of(context)
+                              .textTheme
+                              .navTitleTextStyle
+                              .copyWith(fontWeight: FontWeight.bold, fontSize: 32),
+                        ),
+                        const SizedBox(height: 18),
+
+                        // --- DEĞİŞİKLİK 1: Güzergah/KM satırı Center ile ortalandı ---
+                        Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(child: Text(arac.guzergah, style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 16), overflow: TextOverflow.ellipsis)),
+                              const VerticalDivider(width: 12, thickness: 1, color: CupertinoColors.separator),
+                              Text(arac.kmAralik, style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 16)),
+                            ],
+                          ),
+                        ),
+                        
+                        const Spacer(), // Butonları en alta iter
+
+                        // --- DEĞİŞİKLİK 2: Butonlar Center ile ortalandı ve Sil butonu eklendi ---
+                        Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CupertinoButton(
+                                onPressed: onEdit,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                color: CupertinoColors.systemTeal,
+                                borderRadius: BorderRadius.circular(16.0),
+                                child: Text(
+                                  'Düzenle',
+                                  style: TextStyle(
+                                    color: CupertinoColors.white,
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Butonu, kenarlık vermek için bir Container ile sarmalıyoruz
+                              Container(
+                                decoration: BoxDecoration(
+                                  // Kenarlık rengini ve kalınlığını belirliyoruz
+                                  border: Border.all(
+                                    color: CupertinoColors.systemRed,
+                                    width: 1.0,
+                                  ),
+                                  // Kenarlıkları butonun kendi şekli gibi yuvarlak yapıyoruz
+                                  borderRadius: BorderRadius.circular(16.0),
+                                ),
+                                child: CupertinoButton(
+                                  onPressed: onDelete,
+                                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 8),
+                                  child: Text(
+                                    'Sil',
+                                    style: TextStyle(
+                                      // Yazı rengini de kenarlıkla aynı yapıyoruz
+                                      color: CupertinoColors.systemRed,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Sağ Taraf: Sadece boşluk bırakır, resim bunun üzerine gelecek
+                const Expanded(flex: 0, child: SizedBox()),
+              ],
+            ),
+          ),
+
+          // 2. Katman: Araç Resmi
+          Positioned(
+                      top: -85,
+                      right: 5,
+                      child: SizedBox(
+                        width: 180,
+                        height: 180,
+                        // Resmi yatayda aynalamak için Transform.scale ile sarmalıyoruz
+                        child: Transform.scale(
+                          scaleX: -1, // Yatay aynalama için bu satırı ekledik
+                          child: Image.asset(
+                            'assets/mercedes-sprinter.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+
+// Mevcut AraclarPage ve _AraclarPageState'i bununla değiştirin.
 class AraclarPage extends StatefulWidget {
   @override
   _AraclarPageState createState() => _AraclarPageState();
@@ -191,6 +348,42 @@ class _AraclarPageState extends State<AraclarPage> {
   Future<void> _loadInitialData() async {
     await _loadGuzergahlar();
     await _loadAraclar();
+  }
+
+  // Bu metot, silme butonuna basıldığında çalışır ve onay penceresi gösterir.
+  Future<void> _aracSil(int index) async {
+    final arac = araclar[index];
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: Text('Aracı Sil'),
+        content: Text('"${arac.plaka}" plakalı aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
+        actions: [
+          CupertinoDialogAction(
+            child: Text('İptal'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            child: Text('Sil'),
+            onPressed: () {
+              setState(() {
+                araclar.removeAt(index);
+              });
+              _saveAracList(); // Güncel listeyi kaydetmek için bu yardımcı metodu çağırır.
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Bu yardımcı metot, güncel araç listesini telefona kaydeder.
+  Future<void> _saveAracList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = araclar.map((e) => e.toJson()).toList();
+    await prefs.setStringList('araclar', jsonList);
   }
 
   Future<void> _loadGuzergahlar() async {
@@ -220,7 +413,12 @@ class _AraclarPageState extends State<AraclarPage> {
         kmBaslangicController.text.isEmpty ||
         kmAralikController.text.isEmpty ||
         (guzergahlar.isNotEmpty && seciliGuzergah.isEmpty) ) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lütfen tüm alanları doldurun.')));
+          // Hata mesajını Cupertino stiliyle gösterelim
+          showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+            title: Text('Eksik Bilgi'),
+            content: Text('Lütfen tüm alanları doldurun.'),
+            actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+          ));
           return;
         }
 
@@ -277,65 +475,122 @@ class _AraclarPageState extends State<AraclarPage> {
     });
   }
 
+  // Cupertino Picker'ı göstermek için yardımcı metot
+  void _showPicker(BuildContext context, List<String> items, String currentValue, ValueChanged<String> onChanged) {
+    final selectedIndex = items.indexOf(currentValue);
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (BuildContext context) => Container(
+        height: 216,
+        padding: const EdgeInsets.only(top: 6.0),
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: SafeArea(
+          top: false,
+          child: CupertinoPicker(
+            magnification: 1.22,
+            squeeze: 1.2,
+            useMagnifier: true,
+            itemExtent: 32.0,
+            scrollController: FixedExtentScrollController(initialItem: selectedIndex),
+            onSelectedItemChanged: (int selectedIndex) {
+              onChanged(items[selectedIndex]);
+            },
+            children: List<Widget>.generate(items.length, (int index) {
+              return Center(child: Text(items[index]));
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Araçlar')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+    // Scaffold -> CupertinoPageScaffold
+    return CupertinoPageScaffold(
+      // AppBar -> CupertinoNavigationBar
+      navigationBar: CupertinoNavigationBar(
+        middle: Text('Araçlar'),
+      ),
+      child: SafeArea( // İçeriğin sistem alanlarına taşmasını önler
         child: ListView(
+          padding: const EdgeInsets.all(16.0),
           children: [
-            TextField(
+            Text('Yeni Araç', style: CupertinoTheme.of(context).textTheme.navTitleTextStyle),
+            Divider(thickness: 0,),
+            // TextField -> CupertinoTextField
+            CupertinoTextField(
                 controller: plakaController,
-                decoration: InputDecoration(labelText: 'Plaka')),
-            TextField(
+                placeholder: 'Plaka'),
+            SizedBox(height: 8),
+            CupertinoTextField(
                 controller: kmBaslangicController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: 'Gün Başı KM')),
-            TextField(
+                placeholder: 'Gün Başı KM'),
+            SizedBox(height: 8),
+            CupertinoTextField(
                 controller: kmAralikController,
-                decoration:
-                    InputDecoration(labelText: 'KM Aralığı (örn: 90-100)')),
-            DropdownButton<String>(
-              value: haftasonuDurumu,
-              isExpanded: true,
-              onChanged: (val) => setState(() => haftasonuDurumu = val!),
-              items: ['Çalışıyor', 'Çalışmıyor']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-            ),
+                placeholder: 'KM Aralığı (örn: 90-100)'),
+            SizedBox(height: 16),
+            
+            // DropdownButton -> Cupertino-stili butonlar
+            CupertinoListTile(title: Text('Hafta Sonu Durumu'), additionalInfo: Text(haftasonuDurumu), onTap: () {
+               _showPicker(context, ['Çalışıyor', 'Çalışmıyor'], haftasonuDurumu, (newValue) {
+                  setState(() => haftasonuDurumu = newValue);
+               });
+            }),
             if (guzergahlar.isNotEmpty)
-              DropdownButton<String>(
-                value: seciliGuzergah,
-                isExpanded: true,
-                onChanged: (val) => setState(() => seciliGuzergah = val!),
-                items: guzergahlar
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-              )
+              CupertinoListTile(title: Text('Güzergah'), additionalInfo: Text(seciliGuzergah), onTap: (){
+                _showPicker(context, guzergahlar, seciliGuzergah, (newValue) {
+                  setState(() => seciliGuzergah = newValue);
+                });
+              })
             else
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12.0),
-                child: Text("Lütfen önce Güzergah sekmesinden bir güzergah ekleyin.", style: TextStyle(color: Colors.red)),
+                child: Text("Lütfen önce Güzergah sekmesinden bir güzergah ekleyin.", style: TextStyle(color: CupertinoColors.systemRed)),
               ),
-            ElevatedButton(
+            
+            SizedBox(height: 20),
+            // ElevatedButton -> CupertinoButton.filled
+            CupertinoButton.filled(
+              borderRadius: BorderRadius.circular(16.0),
                 onPressed: _saveOrUpdateArac, 
                 child: Text(_duzenlenenIndex == null ? 'Kaydet' : 'Güncelle')
             ),
-            Divider(),
-            ...araclar.asMap().entries.map((entry) {
-              final index = entry.key;
-              final a = entry.value;
-              return ListTile(
-                title: Text(a.plaka),
-                subtitle: Text(
-                    '${a.gunBasiKm} km - ${a.kmAralik} - ${a.haftasonuDurumu}\n${a.guzergah}'),
-                trailing: IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () => _editArac(index),
+            SizedBox(height: 20),
+            
+            // Liste başlığı
+            Text('Kayıtlı Araçlar', style: CupertinoTheme.of(context).textTheme.navTitleTextStyle),
+
+            // Liste artık yeni AracKarti widget'ını kullanıyor
+            if (araclar.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 40.0),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(CupertinoIcons.car_detailed, size: 60, color: CupertinoColors.secondaryLabel),
+                      SizedBox(height: 10),
+                      Text('Henüz araç eklenmedi.', style: CupertinoTheme.of(context).textTheme.textStyle)
+                    ],
+                  ),
                 ),
-              );
-            }),
+              )
+            else
+              ...araclar.asMap().entries.map((entry) {
+                final index = entry.key;
+                final a = entry.value;
+                // ListTile yerine özel AracKarti widget'ımızı kullanıyoruz
+                return AracKarti(
+                  arac: a,
+                  onEdit: () => _editArac(index),
+                  onDelete: () => _aracSil(index),
+                );
+              }),
           ],
         ),
       ),
@@ -343,6 +598,43 @@ class _AraclarPageState extends State<AraclarPage> {
   }
 }
 
+// Bu yardımcı widget, CupertinoListTile'a benzer bir yapı sunar
+class CupertinoListTile extends StatelessWidget {
+  final Widget title;
+  final Widget additionalInfo;
+  final VoidCallback onTap;
+
+  const CupertinoListTile({super.key, required this.title, required this.additionalInfo, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            DefaultTextStyle(style: CupertinoTheme.of(context).textTheme.textStyle, child: title),
+            Row(
+              children: [
+                DefaultTextStyle(
+                  style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(color: CupertinoColors.secondaryLabel), 
+                  child: additionalInfo
+                ),
+                SizedBox(width: 6),
+                Icon(CupertinoIcons.chevron_up_chevron_down, size: 16, color: CupertinoColors.tertiaryLabel)
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Mevcut TabloOlusturPage ve State'ini bununla değiştirin.
 class TabloOlusturPage extends StatefulWidget {
   @override
   _TabloOlusturPageState createState() => _TabloOlusturPageState();
@@ -367,27 +659,54 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
     });
   }
 
-  Future<void> _aySeciciGoster(BuildContext context) async {
-    final DateTime? secilen = await showDatePicker(
+  // showDatePicker -> showCupertinoModalPopup + CupertinoDatePicker
+  void _aySeciciGoster() {
+    showCupertinoModalPopup<void>(
       context: context,
-      initialDate: _seciliTarih,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2040),
-      locale: const Locale('tr', 'TR'),
-      initialDatePickerMode: DatePickerMode.year,
+      builder: (BuildContext context) => Container(
+        height: 250,
+        padding: const EdgeInsets.only(top: 6.0),
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            // "Bitti" butonu ekleyerek kullanıcının seçimini onaylamasını sağlıyoruz.
+            SizedBox(
+              height: 40,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CupertinoButton(
+                    child: Text('Bitti'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  )
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                initialDateTime: _seciliTarih,
+                mode: CupertinoDatePickerMode.monthYear, // Sadece ay ve yıl seçimi
+                onDateTimeChanged: (DateTime newDate) {
+                  setState(() {
+                    _seciliTarih = newDate;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-    if (secilen != null && secilen != _seciliTarih) {
-      setState(() {
-        _seciliTarih = secilen;
-      });
-    }
   }
 
   void _raporOlusturVeGoruntule(DateTime secilenAy) {
     final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
     if (seciliAraclar.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lütfen en az bir araç seçin.")));
+      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+        title: Text('Araç Seçilmedi'),
+        content: Text('Lütfen rapor oluşturmak için en az bir araç seçin.'),
+        actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+      ));
       return;
     }
 
@@ -445,7 +764,8 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
+      // Cupertino stili sayfa geçiş animasyonu için
+      CupertinoPageRoute(
         builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
       ),
     );
@@ -453,334 +773,93 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Rapor Oluştur")),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: tumAraclar.length,
-              itemBuilder: (context, index) {
-                final arac = tumAraclar[index];
-                return CheckboxListTile(
-                  value: seciliIndexler.contains(index),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) {
-                        seciliIndexler.add(index);
-                      } else {
-                        seciliIndexler.remove(index);
-                      }
-                    });
-                  },
-                  title: Text(arac.plaka),
-                  subtitle: Text(
-                      '${arac.kmAralik} | ${arac.haftasonuDurumu} | ${arac.guzergah}'),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text("Rapor Ayı Seçimi:", style: Theme.of(context).textTheme.titleMedium),
-                SizedBox(height: 8),
-                OutlinedButton.icon(
-                  icon: Icon(Icons.calendar_today),
-                  label: Text(
-                    DateFormat.yMMMM('tr_TR').format(_seciliTarih),
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () => _aySeciciGoster(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-                onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
-                child: Text("Rapor Oluştur"),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 144),
-                ),
-            ),
-          ),
-        ],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text("Rapor Oluştur"),
       ),
-    );
-  }
-}
-
-class TablolarPage extends StatefulWidget {
-  @override
-  _TablolarPageState createState() => _TablolarPageState();
-}
-
-class _TablolarPageState extends State<TablolarPage> {
-  List<File> _savedFiles = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedReports();
-  }
-
-  Future<void> _loadSavedReports() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    final directory = await getApplicationDocumentsDirectory();
-    final files = directory.listSync();
-    setState(() {
-      _savedFiles = files
-          .where((file) => file.path.endsWith('.xlsx'))
-          .map((file) => File(file.path))
-          .toList();
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _openFile(String path) async {
-    final result = await OpenFilex.open(path);
-    if (result.type != ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bu dosyayı açacak bir uygulama bulunamadı: ${result.message}')),
-      );
-    }
-  }
-
-  Future<void> _deleteFile(File file) async {
-    try {
-      await file.delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${_getFileName(file.path)} silindi.')),
-      );
-      _loadSavedReports();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Dosya silinirken bir hata oluştu.')),
-      );
-    }
-  }
-  
-  String _getFileName(String path) {
-    return path.split('/').last;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Kaydedilmiş Raporlar"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _loadSavedReports,
-            tooltip: 'Listeyi Yenile',
-          )
-        ],
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _savedFiles.isEmpty
-              ? Center(
-                  child: Text(
-                    "Henüz kaydedilmiş bir rapor bulunmuyor.",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _savedFiles.length,
-                  itemBuilder: (context, index) {
-                    final file = _savedFiles[index];
-                    final fileName = _getFileName(file.path);
-
-                    return Dismissible(
-                      key: Key(fileName),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (direction) {
-                        _deleteFile(file);
-                      },
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: EdgeInsets.symmetric(horizontal: 20.0),
-                        child: Icon(Icons.delete, color: Colors.white),
-                      ),
-                      child: ListTile(
-                        leading: Icon(Icons.description, color: Theme.of(context).primaryColor),
-                        title: Text(fileName),
-                        subtitle: Text("Açmak için dokunun, silmek için sola kaydırın."),
-                        onTap: () => _openFile(file.path),
-                      ),
-                    );
-                  },
-                ),
-    );
-  }
-}
-
-class GuzergahAyarPage extends StatefulWidget {
-  @override
-  _GuzergahAyarPageState createState() => _GuzergahAyarPageState();
-}
-
-class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
-  List<String> guzergahlar = [];
-  final TextEditingController guzergahEkleController = TextEditingController();
-  String? _duzenlenenGuzergah;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      guzergahlar = prefs.getStringList('guzergahlar') ?? [];
-    });
-  }
-
-  Future<void> _kaydetVeyaGuncelle() async {
-    final yeniGuzergahAdi = guzergahEkleController.text.trim();
-    if (yeniGuzergahAdi.isEmpty) return;
-
-    final prefs = await SharedPreferences.getInstance();
-
-    if (_duzenlenenGuzergah != null) {
-      if (guzergahlar.contains(yeniGuzergahAdi) && yeniGuzergahAdi != _duzenlenenGuzergah) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu güzergah adı zaten mevcut.'), backgroundColor: Colors.red));
-        return;
-      }
-
-      final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
-      List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
-
-      for (int i = 0; i < araclar.length; i++) {
-        if (araclar[i].guzergah == _duzenlenenGuzergah) {
-          araclar[i] = AracModel(
-              plaka: araclar[i].plaka,
-              guzergah: yeniGuzergahAdi,
-              gunBasiKm: araclar[i].gunBasiKm,
-              kmAralik: araclar[i].kmAralik,
-              haftasonuDurumu: araclar[i].haftasonuDurumu);
-        }
-      }
-      await prefs.setStringList('araclar', araclar.map((e) => e.toJson()).toList());
-      
-      final index = guzergahlar.indexOf(_duzenlenenGuzergah!);
-      if (index != -1) {
-        setState(() {
-          guzergahlar[index] = yeniGuzergahAdi;
-        });
-      }
-
-    } else {
-      if (guzergahlar.contains(yeniGuzergahAdi)) {
-         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bu güzergah adı zaten mevcut.'), backgroundColor: Colors.red));
-        return;
-      }
-      setState(() {
-        guzergahlar.add(yeniGuzergahAdi);
-      });
-    }
-
-    await prefs.setStringList('guzergahlar', guzergahlar);
-    setState(() {
-      guzergahEkleController.clear();
-      _duzenlenenGuzergah = null;
-    });
-  }
-  
-  void _duzenlemeModunuBaslat(String guzergah) {
-    setState(() {
-      _duzenlenenGuzergah = guzergah;
-      guzergahEkleController.text = guzergah;
-    });
-  }
-
-  Future<void> _sil(String guzergahToDelete) async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
-    final List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
-    final bool isRouteInUse = araclar.any((arac) => arac.guzergah == guzergahToDelete);
-
-    if (isRouteInUse) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Bu güzergah bir araç tarafından kullanıldığı için silinemez.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } else {
-      setState(() {
-        guzergahlar.remove(guzergahToDelete);
-      });
-      await prefs.setStringList('guzergahlar', guzergahlar);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$guzergahToDelete" güzergahı silindi.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Güzergah Ayarları')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      child: SafeArea(
         child: Column(
           children: [
-            TextField(
-              controller: guzergahEkleController,
-              decoration: InputDecoration(
-                labelText: _duzenlenenGuzergah == null ? 'Yeni Güzergah' : 'Güzergahı Düzenle',
-                suffixIcon: IconButton(
-                  icon: Icon(_duzenlenenGuzergah == null ? Icons.add : Icons.check),
-                  onPressed: _kaydetVeyaGuncelle,
-                ),
-              ),
-            ),
             Expanded(
-              child: ListView.builder(
-                itemCount: guzergahlar.length,
+              // CheckboxListTile yerine özel bir liste elemanı
+              child: ListView.separated(
+                itemCount: tumAraclar.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final guzergah = guzergahlar[index];
-                  return ListTile(
-                    title: Text(guzergah),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.edit, color: Theme.of(context).primaryColor),
-                          onPressed: () => _duzenlemeModunuBaslat(guzergah),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _sil(guzergah),
-                        ),
-                      ],
+                  final arac = tumAraclar[index];
+                  final bool isSelected = seciliIndexler.contains(index);
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          seciliIndexler.remove(index);
+                        } else {
+                          seciliIndexler.add(index);
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      color: isSelected ? CupertinoColors.systemTeal.withOpacity(0.2) : Colors.transparent,
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected ? CupertinoIcons.check_mark_circled_solid : CupertinoIcons.circle,
+                            color: isSelected ? CupertinoColors.systemTeal : CupertinoColors.secondaryLabel,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(arac.plaka, style: CupertinoTheme.of(context).textTheme.textStyle),
+                                Text(arac.guzergah, style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
               ),
-            )
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CupertinoButton(
+                    onPressed: _aySeciciGoster,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Rapor Ayı:', style: CupertinoTheme.of(context).textTheme.textStyle),
+                        Text(
+                          DateFormat.yMMMM('tr_TR').format(_seciliTarih),
+                          style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  CupertinoButton.filled(
+                      onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
+                      child: Text("Rapor Oluştur ve Görüntüle"),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+// Mevcut RaporOnizlemePage sınıfını bununla değiştirin.
 
 class RaporOnizlemePage extends StatelessWidget {
   final Map<AracModel, List<List<dynamic>>> raporVerisi;
@@ -832,35 +911,38 @@ class RaporOnizlemePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Rapor Önizleme"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.save_alt),
-            onPressed: () => _kaydetVePaylas(context),
-            tooltip: 'Kaydet ve Paylaş',
-          ),
-        ],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text("Rapor Önizleme"),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: Icon(CupertinoIcons.share),
+          onPressed: () => _kaydetVePaylas(context),
+        ),
       ),
-      body: ListView.builder(
+      child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
         itemCount: raporVerisi.keys.length,
         itemBuilder: (context, index) {
           final arac = raporVerisi.keys.elementAt(index);
           final dataRows = raporVerisi[arac]!;
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 20),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Araç: ${arac.plaka}', style: Theme.of(context).textTheme.titleLarge),
-                  SizedBox(height: 10),
-                  SizedBox(
-                    height: 400,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                  child: Text('Araç: ${arac.plaka}', style: CupertinoTheme.of(context).textTheme.navTitleTextStyle),
+                ),
+                SizedBox(
+                  height: 400,
+                  // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+                  // DataTable2'yi Material widget'ı ile sarmalıyoruz.
+                  child: Material(
+                    // Arka plan renginin Cupertino temasıyla uyumlu olmasını sağlıyoruz.
+                    color: Colors.transparent,
                     child: DataTable2(
                       columnSpacing: 12, horizontalMargin: 12, minWidth: 600,
                       columns: [
@@ -881,11 +963,361 @@ class RaporOnizlemePage extends StatelessWidget {
                       }).toList(),
                     ),
                   ),
-                ],
-              ),
+                  // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+                ),
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// Mevcut TablolarPage ve State'ini bununla değiştirin.
+
+class TablolarPage extends StatefulWidget {
+  @override
+  _TablolarPageState createState() => _TablolarPageState();
+}
+
+class _TablolarPageState extends State<TablolarPage> {
+  List<File> _savedFiles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedReports();
+  }
+
+  Future<void> _loadSavedReports() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final files = directory.listSync();
+      setState(() {
+        _savedFiles = files
+            .where((file) => file.path.endsWith('.xlsx'))
+            .map((file) => File(file.path))
+            // Dosyaları oluşturulma tarihine göre en yeniden eskiye doğru sırala
+            .toList()
+              ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+       showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+        title: Text('Hata'),
+        content: Text('Kaydedilmiş raporlar okunurken bir sorun oluştu.'),
+        actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+      ));
+    }
+  }
+
+  Future<void> _openFile(String path) async {
+    final result = await OpenFilex.open(path);
+    if (result.type != ResultType.done) {
+      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+        title: Text('Dosya Açılamadı'),
+        content: Text('Bu dosyayı açacak bir uygulama bulunamadı.\n\nHata: ${result.message}'),
+        actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+      ));
+    }
+  }
+
+  Future<void> _deleteFile(File file) async {
+    try {
+      await file.delete();
+      // SnackBar yerine daha geçici bir Cupertino bildirimi kullanalım.
+      // Ya da direkt listeyi yenileyelim. Kullanıcı silindiğini görecektir.
+      _loadSavedReports();
+    } catch (e) {
+      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+        title: Text('Hata'),
+        content: Text('Dosya silinirken bir sorun oluştu.'),
+        actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+      ));
+    }
+  }
+  
+  String _getFileName(String path) {
+    return path.split('/').last;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Scaffold -> CupertinoPageScaffold
+    return CupertinoPageScaffold(
+      // AppBar -> CupertinoNavigationBar
+      navigationBar: CupertinoNavigationBar(
+        middle: Text("Kaydedilmiş Raporlar"),
+        // actions -> trailing
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: Icon(CupertinoIcons.refresh),
+          onPressed: _loadSavedReports,
+        ),
+      ),
+      child: _isLoading
+          // CircularProgressIndicator -> CupertinoActivityIndicator
+          ? Center(child: CupertinoActivityIndicator(radius: 15))
+          : _savedFiles.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.folder_open, size: 60, color: CupertinoColors.secondaryLabel),
+                      SizedBox(height: 16),
+                      Text(
+                        "Henüz kaydedilmiş bir rapor bulunmuyor.",
+                        style: CupertinoTheme.of(context).textTheme.textStyle,
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: _savedFiles.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1, indent: 56),
+                  itemBuilder: (context, index) {
+                    final file = _savedFiles[index];
+                    final fileName = _getFileName(file.path);
+
+                    return Dismissible(
+                      key: Key(fileName),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        _deleteFile(file);
+                      },
+                      background: Container(
+                        color: CupertinoColors.systemRed,
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Icon(CupertinoIcons.delete_solid, color: CupertinoColors.white),
+                      ),
+                      // ListTile yerine özel bir yapı kullanıyoruz
+                      child: GestureDetector(
+                        onTap: () => _openFile(file.path),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                          color: CupertinoTheme.of(context).scaffoldBackgroundColor,
+                          child: Row(
+                            children: [
+                              Icon(CupertinoIcons.doc_chart_fill, color: CupertinoColors.systemTeal),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(fileName, style: CupertinoTheme.of(context).textTheme.textStyle, maxLines: 1, overflow: TextOverflow.ellipsis,),
+                                    SizedBox(height: 2),
+                                    Text("Oluşturulma: ${DateFormat.yMd('tr_TR').add_Hm().format(file.lastModifiedSync())}", style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(CupertinoIcons.right_chevron, color: CupertinoColors.tertiaryLabel),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+// Mevcut GuzergahAyarPage ve State'ini bununla değiştir.
+
+class GuzergahAyarPage extends StatefulWidget {
+  @override
+  _GuzergahAyarPageState createState() => _GuzergahAyarPageState();
+}
+
+class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
+  List<String> guzergahlar = [];
+  final TextEditingController guzergahEkleController = TextEditingController();
+  String? _duzenlenenGuzergah;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      guzergahlar = prefs.getStringList('guzergahlar') ?? [];
+    });
+  }
+
+  Future<void> _kaydetVeyaGuncelle() async {
+    final yeniGuzergahAdi = guzergahEkleController.text.trim();
+    if (yeniGuzergahAdi.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    if (_duzenlenenGuzergah != null) {
+      if (guzergahlar.contains(yeniGuzergahAdi) && yeniGuzergahAdi != _duzenlenenGuzergah) {
+        // Cupertino stili uyarı
+        showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+          title: Text('Hata'),
+          content: Text('Bu güzergah adı zaten mevcut.'),
+          actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+        ));
+        return;
+      }
+
+      final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
+      List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+
+      for (int i = 0; i < araclar.length; i++) {
+        if (araclar[i].guzergah == _duzenlenenGuzergah) {
+          araclar[i] = AracModel(
+              plaka: araclar[i].plaka,
+              guzergah: yeniGuzergahAdi,
+              gunBasiKm: araclar[i].gunBasiKm,
+              kmAralik: araclar[i].kmAralik,
+              haftasonuDurumu: araclar[i].haftasonuDurumu);
+        }
+      }
+      await prefs.setStringList('araclar', araclar.map((e) => e.toJson()).toList());
+      
+      final index = guzergahlar.indexOf(_duzenlenenGuzergah!);
+      if (index != -1) {
+        setState(() {
+          guzergahlar[index] = yeniGuzergahAdi;
+        });
+      }
+
+    } else {
+      if (guzergahlar.contains(yeniGuzergahAdi)) {
+        showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+          title: Text('Hata'),
+          content: Text('Bu güzergah adı zaten mevcut.'),
+          actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+        ));
+        return;
+      }
+      setState(() {
+        guzergahlar.add(yeniGuzergahAdi);
+      });
+    }
+
+    await prefs.setStringList('guzergahlar', guzergahlar);
+    setState(() {
+      guzergahEkleController.clear();
+      _duzenlenenGuzergah = null;
+    });
+  }
+  
+  void _duzenlemeModunuBaslat(String guzergah) {
+    setState(() {
+      _duzenlenenGuzergah = guzergah;
+      guzergahEkleController.text = guzergah;
+    });
+  }
+
+  Future<void> _sil(String guzergahToDelete) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
+    final List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+    final bool isRouteInUse = araclar.any((arac) => arac.guzergah == guzergahToDelete);
+
+    if (isRouteInUse) {
+      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+          title: Text('Silinemez'),
+          content: Text('Bu güzergah bir veya daha fazla araç tarafından kullanıldığı için silinemez.'),
+          actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Anladım'), onPressed: () => Navigator.of(context).pop())],
+        ));
+    } else {
+      // Silme işlemi için onay alalım
+      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+          title: Text('Güzergahı Sil'),
+          content: Text('"$guzergahToDelete" güzergahını silmek istediğinizden emin misiniz?'),
+          actions: [
+            CupertinoDialogAction(child: Text('İptal'), onPressed: () => Navigator.of(context).pop()),
+            CupertinoDialogAction(isDestructiveAction: true, child: Text('Sil'), onPressed: () {
+              Navigator.of(context).pop(); // Diyaloğu kapat
+              setState(() {
+                guzergahlar.remove(guzergahToDelete);
+              });
+              prefs.setStringList('guzergahlar', guzergahlar);
+            }),
+          ],
+        ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Scaffold -> CupertinoPageScaffold
+    return CupertinoPageScaffold(
+      // AppBar -> CupertinoNavigationBar
+      navigationBar: CupertinoNavigationBar(
+        middle: Text('Güzergah Ayarları'),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: CupertinoTextField(
+                controller: guzergahEkleController,
+                placeholder: _duzenlenenGuzergah == null ? 'Yeni Güzergah Ekle' : 'Güzergahı Düzenle',
+                // Butonu suffix (son ek) olarak ekliyoruz
+                suffix: CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: Icon(_duzenlenenGuzergah == null ? CupertinoIcons.add_circled_solid : CupertinoIcons.check_mark_circled_solid),
+                  onPressed: _kaydetVeyaGuncelle,
+                ),
+              ),
+            ),
+            // ListView'i Expanded ile sarmalayarak kalan tüm alanı kaplamasını sağlıyoruz
+            Expanded(
+              child: ListView.separated(
+                itemCount: guzergahlar.length,
+                separatorBuilder: (context, index) => Divider(height: 1), // Her eleman arasına çizgi
+                itemBuilder: (context, index) {
+                  final guzergah = guzergahlar[index];
+                  // ListTile yerine daha sade bir yapı
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    color: CupertinoTheme.of(context).scaffoldBackgroundColor,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(guzergah, style: CupertinoTheme.of(context).textTheme.textStyle),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              child: Icon(CupertinoIcons.pencil),
+                              onPressed: () => _duzenlemeModunuBaslat(guzergah),
+                            ),
+                            CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              child: Icon(CupertinoIcons.trash, color: CupertinoColors.systemRed),
+                              onPressed: () => _sil(guzergah),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
