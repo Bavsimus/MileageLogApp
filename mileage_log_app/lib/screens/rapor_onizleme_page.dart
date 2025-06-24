@@ -13,17 +13,15 @@ class RaporOnizlemePage extends StatelessWidget {
   const RaporOnizlemePage({Key? key, required this.raporVerisi}) : super(key: key);
 
   Future<void> _kaydetVePaylas(BuildContext context) async {
+    // 1. Excel verisini hazırla
     final excel = Excel.createExcel();
     for (var entry in raporVerisi.entries) {
       final arac = entry.key;
       final veriler = entry.value;
       final sheet = excel['${arac.plaka.replaceAll(' ', '_')}'];
       sheet.appendRow([
-        TextCellValue('Tarih'),
-        TextCellValue('Gün Başı'),
-        TextCellValue('Gün Sonu'),
-        TextCellValue('Yapılan KM'),
-        TextCellValue('Güzergah')
+        TextCellValue('Tarih'), TextCellValue('Gün Başı'), TextCellValue('Gün Sonu'),
+        TextCellValue('Yapılan KM'), TextCellValue('Güzergah')
       ]);
       for (final satir in veriler) {
         sheet.appendRow([
@@ -35,21 +33,52 @@ class RaporOnizlemePage extends StatelessWidget {
         ]);
       }
     }
+    final fileBytes = excel.encode();
+    if (fileBytes == null) {
+      if (!context.mounted) return;
+      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(title: Text('Hata'), content: Text('Rapor dosyası oluşturulamadı.'), actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())]));
+      return;
+    }
+
+    // 2. Dosyayı kalıcı olarak kaydet
     final now = DateTime.now();
     final fileName = 'AracRaporu_${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}.xlsx';
     final directory = await getApplicationDocumentsDirectory();
     final path = '${directory.path}/$fileName';
-    final fileBytes = excel.encode();
-    if (fileBytes != null) {
-      final file = File(path);
-      await file.writeAsBytes(fileBytes);
+    final file = File(path);
+    await file.writeAsBytes(fileBytes);
 
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Rapor, "Tablolar" sekmesine kaydedildi: $fileName')),
-      );
+    if (!context.mounted) return;
 
+    // 3. Önce paylaş, sonra geri bildirim ver
+    try {
       await Share.shareXFiles([XFile(path)], text: 'Araç Raporu');
+      
+      // --- DEĞİŞİKLİK BURADA: SnackBar yerine CupertinoAlertDialog kullanılıyor ---
+      if (context.mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: Text('Başarılı'),
+            content: Text('Rapor, "Tablolar" sekmesine kaydedildi ve paylaşıldı.'),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                child: Text('Harika!'),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            ],
+          ),
+        );
+      }
+    } catch(e) {
+      if (context.mounted) {
+        showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
+            title: Text('Paylaşım Hatası'),
+            content: Text('Dosya paylaşılırken bir hata oluştu: $e'),
+            actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
+        ));
+      }
     }
   }
 
@@ -58,7 +87,6 @@ class RaporOnizlemePage extends StatelessWidget {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: Text("Rapor Önizleme"),
-        // Bu sayfadan geri dönebilmek için 'leading' (sol taraf) butonunu ekliyoruz.
         leading: CupertinoNavigationBarBackButton(
           previousPageTitle: 'Geri',
           onPressed: () => Navigator.of(context).pop(),
@@ -70,7 +98,6 @@ class RaporOnizlemePage extends StatelessWidget {
         ),
       ),
       child: Material(
-        // DataTable2'nin çalışabilmesi için Material widget'ı ile sarmalıyoruz.
         color: CupertinoTheme.of(context).scaffoldBackgroundColor,
         child: ListView.builder(
           padding: const EdgeInsets.all(16.0),
