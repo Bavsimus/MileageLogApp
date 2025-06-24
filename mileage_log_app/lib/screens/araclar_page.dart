@@ -21,6 +21,8 @@ class _AraclarPageState extends State<AraclarPage> {
   final TextEditingController kmAralikController = TextEditingController();
   String seciliGuzergah = '';
   String haftasonuDurumu = 'Çalışıyor';
+  final List<String> _markalar = ['Mercedes', 'Ford', 'Fiat', 'Renault', 'Volkswagen', 'Peugeot', 'Diğer'];
+  String seciliMarka = 'Mercedes';
 
   @override
   void initState() {
@@ -80,6 +82,7 @@ class _AraclarPageState extends State<AraclarPage> {
       gunBasiKm: double.tryParse(kmBaslangicController.text.trim()) ?? 0,
       kmAralik: kmAralikController.text.trim(),
       haftasonuDurumu: haftasonuDurumu,
+      marka: seciliMarka,
     );
 
     setState(() {
@@ -220,6 +223,12 @@ class _AraclarPageState extends State<AraclarPage> {
             CupertinoTextField(
                 controller: kmAralikController,
                 placeholder: 'KM Aralığı (örn: 90-100)'),
+            SizedBox(height: 16),
+            CustomCupertinoListTile(title: Text('Marka'), additionalInfo: Text(seciliMarka), onTap: () {
+             _showPicker(context, _markalar, seciliMarka, (newValue) {
+                setState(() => seciliMarka = newValue);
+             });
+          }),
             Divider(height: 1),
             CustomCupertinoListTile(
                 title: Text('Hafta Sonu Durumu'),
@@ -247,14 +256,15 @@ class _AraclarPageState extends State<AraclarPage> {
                 child: Text("Önce bir güzergah ekleyin.",
                     style: TextStyle(color: CupertinoColors.systemRed)),
               ),
-            SizedBox(height: 20),
+            SizedBox(height: 15),
             CupertinoButton.filled(
+                borderRadius: BorderRadius.circular(16.0),
                 onPressed: _saveOrUpdateArac,
                 child: Text(_duzenlenenIndex == null ? 'Kaydet' : 'Güncelle')),
-            SizedBox(height: 20),
+            SizedBox(height: 30),
             Text('Kayıtlı Araçlar',
                 style: CupertinoTheme.of(context).textTheme.navTitleTextStyle),
-            SizedBox(height: 10),
+            SizedBox(height: 1),
             if (araclar.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 40.0),

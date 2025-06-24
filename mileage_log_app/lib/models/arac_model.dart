@@ -6,6 +6,7 @@ class AracModel {
   final double gunBasiKm;
   final String kmAralik;
   final String haftasonuDurumu;
+  final String marka; // YENİ EKLENEN ALAN
 
   AracModel({
     required this.plaka,
@@ -13,6 +14,7 @@ class AracModel {
     required this.gunBasiKm,
     required this.kmAralik,
     required this.haftasonuDurumu,
+    required this.marka, // YENİ EKLENDİ
   });
 
   Map<String, dynamic> toMap() => {
@@ -21,6 +23,7 @@ class AracModel {
         'gunBasiKm': gunBasiKm,
         'kmAralik': kmAralik,
         'haftasonuDurumu': haftasonuDurumu,
+        'marka': marka, // YENİ EKLENDİ
       };
 
   factory AracModel.fromMap(Map<String, dynamic> map) => AracModel(
@@ -29,6 +32,8 @@ class AracModel {
         gunBasiKm: (map['gunBasiKm'] as num?)?.toDouble() ?? 0.0,
         kmAralik: map['kmAralik'] ?? '',
         haftasonuDurumu: map['haftasonuDurumu'] ?? '',
+        // YENİ EKLENDİ: Eski verilerde bu alan olmayabileceği için varsayılan değer atıyoruz.
+        marka: map['marka'] ?? 'Belirtilmemiş', 
       );
 
   String toJson() => json.encode(toMap());

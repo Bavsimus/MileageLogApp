@@ -43,12 +43,15 @@ class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
       List<AracModel> araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
       for (int i = 0; i < araclar.length; i++) {
         if (araclar[i].guzergah == _duzenlenenGuzergah) {
+          // --- HATA DÜZELTMESİ BURADA: Eksik 'marka' parametresi eklendi ---
           araclar[i] = AracModel(
               plaka: araclar[i].plaka,
               guzergah: yeniGuzergahAdi,
               gunBasiKm: araclar[i].gunBasiKm,
               kmAralik: araclar[i].kmAralik,
-              haftasonuDurumu: araclar[i].haftasonuDurumu);
+              haftasonuDurumu: araclar[i].haftasonuDurumu,
+              marka: araclar[i].marka // Mevcut markayı koru
+          );
         }
       }
       await prefs.setStringList('araclar', araclar.map((e) => e.toJson()).toList());
@@ -120,16 +123,12 @@ class _GuzergahAyarPageState extends State<GuzergahAyarPage> {
       navigationBar: CupertinoNavigationBar(
         middle: Text('Güzergah Ayarları'),
       ),
-      // SafeArea ekleyerek içeriğin başlığın altında kalmasını engelliyoruz
       child: SafeArea(
-        top: true, // Üstten boşluk bırak
-        bottom: false, // Alt boşluk ana TabBar tarafından yönetiliyor
+        top: true,
+        bottom: false,
         child: Column(
           children: [
             Padding(
-              // EdgeInsets.fromLTRB ile boşlukları tek tek kontrol ediyoruz
-              // Üst boşluğu kaldırdık, çünkü SafeArea zaten boşluk bırakıyor.
-              // Alt boşluğu azalttık.
               padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
               child: CupertinoTextField(
                 controller: guzergahEkleController,

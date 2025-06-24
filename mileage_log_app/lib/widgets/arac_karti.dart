@@ -30,7 +30,7 @@ class AracKarti extends StatelessWidget {
             color: CupertinoColors.tertiarySystemBackground,
             margin: EdgeInsets.zero, // Dış container marjini yönettiği için sıfırlıyoruz.
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
+              borderRadius: BorderRadius.circular(16.0),
             ),
             child: Container(
               height: 240,
@@ -81,14 +81,14 @@ class AracKarti extends StatelessWidget {
                             ),
                           ],
                         ),
-                        // 3. Satır: BURAYA ARAÇ MARKASI GELCEK
+                        // 3. Satır: BURAYA ARAÇ MARKASI GELECEK
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(CupertinoIcons.asterisk_circle, size: 16, color: CupertinoColors.secondaryLabel),
+                            Icon(CupertinoIcons.tag, size: 16, color: CupertinoColors.secondaryLabel),
                             const SizedBox(width: 8),
                             Text(
-                              arac.guzergah,
+                              arac.marka.toString(),
                               style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 16),
                             ),
                           ],
@@ -117,7 +117,7 @@ class AracKarti extends StatelessWidget {
                                 onPressed: onEdit,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 color: CupertinoColors.systemTeal,
-                                 borderRadius: BorderRadius.circular(8.0),
+                                 borderRadius: BorderRadius.circular(16.0),
                                 child: Text(
                                   'Düzenle',
                                   style: TextStyle(
@@ -133,12 +133,12 @@ class AracKarti extends StatelessWidget {
                                     color: CupertinoColors.systemRed,
                                     width: 1.0,
                                   ),
-                                  borderRadius: BorderRadius.circular(8.0),
+                                  borderRadius: BorderRadius.circular(16.0),
                                 ),
                                 child: CupertinoButton(
                                   onPressed: onDelete,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                   borderRadius: BorderRadius.circular(8.0),
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                                   borderRadius: BorderRadius.circular(16.0),
                                   child: Text(
                                     'Sil',
                                     style: TextStyle(
