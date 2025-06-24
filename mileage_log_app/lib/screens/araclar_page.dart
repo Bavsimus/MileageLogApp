@@ -6,6 +6,8 @@ import '../widgets/arac_karti.dart';
 import '../widgets/custom_cupertino_list_tile.dart';
 
 class AraclarPage extends StatefulWidget {
+  const AraclarPage({super.key});
+
   @override
   _AraclarPageState createState() => _AraclarPageState();
 }
@@ -21,7 +23,15 @@ class _AraclarPageState extends State<AraclarPage> {
   final TextEditingController kmAralikController = TextEditingController();
   String seciliGuzergah = '';
   String haftasonuDurumu = 'Çalışıyor';
-  final List<String> _markalar = ['Mercedes', 'Ford', 'Fiat', 'Renault', 'Volkswagen', 'Peugeot', 'Diğer'];
+  final List<String> _markalar = [
+    'Mercedes',
+    'Ford',
+    'Fiat',
+    'Renault',
+    'Volkswagen',
+    'Peugeot',
+    'Diğer',
+  ];
   String seciliMarka = 'Mercedes';
 
   @override
@@ -29,7 +39,7 @@ class _AraclarPageState extends State<AraclarPage> {
     super.initState();
     _loadInitialData();
   }
-  
+
   Future<void> _loadInitialData() async {
     await _loadGuzergahlar();
     await _loadAraclar();
@@ -46,8 +56,8 @@ class _AraclarPageState extends State<AraclarPage> {
     setState(() {
       guzergahlar = prefs.getStringList('guzergahlar') ?? [];
       if (guzergahlar.isNotEmpty) {
-        if (seciliGuzergah.isEmpty || !guzergahlar.contains(seciliGuzergah)){
-           seciliGuzergah = guzergahlar.first;
+        if (seciliGuzergah.isEmpty || !guzergahlar.contains(seciliGuzergah)) {
+          seciliGuzergah = guzergahlar.first;
         }
       } else {
         seciliGuzergah = '';
@@ -67,14 +77,23 @@ class _AraclarPageState extends State<AraclarPage> {
     if (plakaController.text.isEmpty ||
         kmBaslangicController.text.isEmpty ||
         kmAralikController.text.isEmpty ||
-        (guzergahlar.isNotEmpty && seciliGuzergah.isEmpty) ) {
-          showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
-            title: Text('Eksik Bilgi'),
-            content: Text('Lütfen tüm alanları doldurun.'),
-            actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
-          ));
-          return;
-        }
+        (guzergahlar.isNotEmpty && seciliGuzergah.isEmpty)) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Eksik Bilgi'),
+          content: const Text('Lütfen tüm alanları doldurun.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text('Tamam'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     // Pop-up mesajını belirlemek için işlem türünü saklayalım
     final bool isUpdating = _duzenlenenIndex != null;
@@ -105,49 +124,57 @@ class _AraclarPageState extends State<AraclarPage> {
 
     await _saveAracList();
 
-    if (mounted) { // Widget'ın hala ekranda olduğundan emin ol
+    if (mounted) {
+      // Widget'ın hala ekranda olduğundan emin ol
       showCupertinoDialog(
         context: context,
         builder: (context) => CupertinoAlertDialog(
-          title: Text(isUpdating ? 'Başarıyla Güncellendi' : 'Başarıyla Kaydedildi'),
-          content: Text(isUpdating ? 'Araç bilgileri güncellendi.' : 'Yeni araç başarıyla eklendi.'),
+          title: Text(
+            isUpdating ? 'Başarıyla Güncellendi' : 'Başarıyla Kaydedildi',
+          ),
+          content: Text(
+            isUpdating
+                ? 'Araç bilgileri güncellendi.'
+                : 'Yeni araç başarıyla eklendi.',
+          ),
           actions: [
             CupertinoDialogAction(
               isDefaultAction: true,
-              child: Text('Tamam'),
+              child: const Text('Tamam'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-            )
+            ),
           ],
         ),
       );
     }
-    
   }
-  
-  void _editArac(int index){
+
+  void _editArac(int index) {
     final arac = araclar[index];
     setState(() {
-       _duzenlenenIndex = index;
-       plakaController.text = arac.plaka;
-       kmBaslangicController.text = arac.gunBasiKm.toString();
-       kmAralikController.text = arac.kmAralik;
-       haftasonuDurumu = arac.haftasonuDurumu;
+      _duzenlenenIndex = index;
+      plakaController.text = arac.plaka;
+      kmBaslangicController.text = arac.gunBasiKm.toString();
+      kmAralikController.text = arac.kmAralik;
+      haftasonuDurumu = arac.haftasonuDurumu;
 
-       if (guzergahlar.contains(arac.guzergah)) {
-         seciliGuzergah = arac.guzergah;
-       } else {
-         seciliGuzergah = guzergahlar.isNotEmpty ? guzergahlar.first : '';
-         WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Aracın eski güzergahı bulunamadı. Lütfen yeni bir tane seçin.'),
-                backgroundColor: Colors.orange,
+      if (guzergahlar.contains(arac.guzergah)) {
+        seciliGuzergah = arac.guzergah;
+      } else {
+        seciliGuzergah = guzergahlar.isNotEmpty ? guzergahlar.first : '';
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Aracın eski güzergahı bulunamadı. Lütfen yeni bir tane seçin.',
               ),
-            );
-         });
-       }
+              backgroundColor: Colors.orange,
+            ),
+          );
+        });
+      }
     });
   }
 
@@ -156,16 +183,18 @@ class _AraclarPageState extends State<AraclarPage> {
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: Text('Aracı Sil'),
-        content: Text('"${arac.plaka}" plakalı aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
+        title: const Text('Aracı Sil'),
+        content: Text(
+          '"${arac.plaka}" plakalı aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+        ),
         actions: [
           CupertinoDialogAction(
-            child: Text('İptal'),
+            child: const Text('İptal'),
             onPressed: () => Navigator.of(context).pop(),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
-            child: Text('Sil'),
+            child: const Text('Sil'),
             onPressed: () {
               setState(() {
                 araclar.removeAt(index);
@@ -179,7 +208,12 @@ class _AraclarPageState extends State<AraclarPage> {
     );
   }
 
-  void _showPicker(BuildContext context, List<String> items, String currentValue, ValueChanged<String> onChanged) {
+  void _showPicker(
+    BuildContext context,
+    List<String> items,
+    String currentValue,
+    ValueChanged<String> onChanged,
+  ) {
     final selectedIndex = items.indexOf(currentValue);
     showCupertinoModalPopup<void>(
       context: context,
@@ -197,7 +231,9 @@ class _AraclarPageState extends State<AraclarPage> {
             squeeze: 1.2,
             useMagnifier: true,
             itemExtent: 32.0,
-            scrollController: FixedExtentScrollController(initialItem: selectedIndex > -1 ? selectedIndex : 0),
+            scrollController: FixedExtentScrollController(
+              initialItem: selectedIndex > -1 ? selectedIndex : 0,
+            ),
             onSelectedItemChanged: (int selectedIndex) {
               onChanged(items[selectedIndex]);
             },
@@ -209,21 +245,19 @@ class _AraclarPageState extends State<AraclarPage> {
       ),
     );
   }
-  
-    @override
+
+  @override
   Widget build(BuildContext context) {
     // CupertinoPageScaffold, içeriğin üst ve alt barların arkasında kalmaması için
     // otomatik olarak bir padding uygular. Bu padding'i alıyoruz.
     final EdgeInsets mediaQueryPadding = MediaQuery.of(context).padding;
 
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('Araçlarım'),
-      ),
+      navigationBar: const CupertinoNavigationBar(middle: Text('Araçlarım')),
       child: SafeArea(
         // SafeArea'yı kullanmak, içeriğin her zaman görünür alanda kalmasını garantiler.
         // top: false, çünkü NavigationBar zaten üst boşluğu yönetiyor.
-        top: false, 
+        top: false,
         child: ListView(
           // DEĞİŞİKLİK BURADA:
           // Artık sabit bir padding vermek yerine, sayfanın kendi padding'ini
@@ -232,73 +266,98 @@ class _AraclarPageState extends State<AraclarPage> {
             16, // Sol boşluk
             100, // Üst boşluk
             16, // Sağ boşluk
-            mediaQueryPadding.bottom + 16, // Telefonun alt sistem boşluğu + kendi boşluğumuz
+            mediaQueryPadding.bottom +
+                16, // Telefonun alt sistem boşluğu + kendi boşluğumuz
           ),
           children: [
             // ... sayfanın geri kalan içeriği tamamen aynı ...
-            CupertinoTextField(controller: plakaController, placeholder: 'Plaka'),
-            SizedBox(height: 8),
             CupertinoTextField(
-                controller: kmBaslangicController,
-                keyboardType: TextInputType.number,
-                placeholder: 'Gün Başı KM'),
-            SizedBox(height: 8),
+              controller: plakaController,
+              placeholder: 'Plaka',
+            ),
+            const SizedBox(height: 8),
             CupertinoTextField(
-                controller: kmAralikController,
-                placeholder: 'KM Aralığı (örn: 90-100)'),
-            SizedBox(height: 16),
-            CustomCupertinoListTile(title: Text('Marka'), additionalInfo: Text(seciliMarka), onTap: () {
-             _showPicker(context, _markalar, seciliMarka, (newValue) {
-                setState(() => seciliMarka = newValue);
-             });
-          }),
-            Divider(height: 1),
+              controller: kmBaslangicController,
+              keyboardType: TextInputType.number,
+              placeholder: 'Gün Başı KM',
+            ),
+            const SizedBox(height: 8),
+            CupertinoTextField(
+              controller: kmAralikController,
+              placeholder: 'KM Aralığı (örn: 90-100)',
+            ),
+            const SizedBox(height: 16),
             CustomCupertinoListTile(
-                title: Text('Hafta Sonu Durumu'),
-                additionalInfo: Text(haftasonuDurumu),
-                onTap: () {
-                  _showPicker(context, ['Çalışıyor', 'Çalışmıyor'],
-                      haftasonuDurumu, (newValue) {
+              title: const Text('Marka'),
+              additionalInfo: Text(seciliMarka),
+              onTap: () {
+                _showPicker(context, _markalar, seciliMarka, (newValue) {
+                  setState(() => seciliMarka = newValue);
+                });
+              },
+            ),
+            const Divider(height: 1),
+            CustomCupertinoListTile(
+              title: const Text('Hafta Sonu Durumu'),
+              additionalInfo: Text(haftasonuDurumu),
+              onTap: () {
+                _showPicker(
+                  context,
+                  ['Çalışıyor', 'Çalışmıyor'],
+                  haftasonuDurumu,
+                  (newValue) {
                     setState(() => haftasonuDurumu = newValue);
-                  });
-                }),
-            Divider(height: 1),
+                  },
+                );
+              },
+            ),
+            const Divider(height: 1),
             if (guzergahlar.isNotEmpty)
               CustomCupertinoListTile(
-                  title: Text('Güzergah'),
-                  additionalInfo: Text(seciliGuzergah),
-                  onTap: () {
-                    _showPicker(context, guzergahlar, seciliGuzergah,
-                        (newValue) {
-                      setState(() => seciliGuzergah = newValue);
-                    });
-                  })
+                title: const Text('Güzergah'),
+                additionalInfo: Text(seciliGuzergah),
+                onTap: () {
+                  _showPicker(context, guzergahlar, seciliGuzergah, (newValue) {
+                    setState(() => seciliGuzergah = newValue);
+                  });
+                },
+              )
             else
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                child: Text("Önce bir güzergah ekleyin.",
-                    style: TextStyle(color: CupertinoColors.systemRed)),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.0),
+                child: Text(
+                  "Önce bir güzergah ekleyin.",
+                  style: TextStyle(color: CupertinoColors.systemRed),
+                ),
               ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             CupertinoButton.filled(
-                borderRadius: BorderRadius.circular(16.0),
-                onPressed: _saveOrUpdateArac,
-                child: Text(_duzenlenenIndex == null ? 'Kaydet' : 'Güncelle')),
-            SizedBox(height: 30),
-            Text('Kayıtlı Araçlar',
-                style: CupertinoTheme.of(context).textTheme.navTitleTextStyle),
-            SizedBox(height: 1),
+              borderRadius: BorderRadius.circular(16.0),
+              onPressed: _saveOrUpdateArac,
+              child: Text(_duzenlenenIndex == null ? 'Kaydet' : 'Güncelle'),
+            ),
+            const SizedBox(height: 30),
+            Text(
+              'Kayıtlı Araçlar',
+              style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+            ),
+            const SizedBox(height: 1),
             if (araclar.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 40.0),
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(CupertinoIcons.car_detailed,
-                          size: 60, color: CupertinoColors.secondaryLabel),
-                      SizedBox(height: 10),
-                      Text('Henüz araç eklenmedi.',
-                          style: CupertinoTheme.of(context).textTheme.textStyle)
+                      const Icon(
+                        CupertinoIcons.car_detailed,
+                        size: 60,
+                        color: CupertinoColors.secondaryLabel,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Henüz araç eklenmedi.',
+                        style: CupertinoTheme.of(context).textTheme.textStyle,
+                      ),
                     ],
                   ),
                 ),
@@ -307,7 +366,7 @@ class _AraclarPageState extends State<AraclarPage> {
               ListView.builder(
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: araclar.length,
                 itemBuilder: (context, index) {
                   final a = araclar[index];
@@ -323,5 +382,4 @@ class _AraclarPageState extends State<AraclarPage> {
       ),
     );
   }
-
 }

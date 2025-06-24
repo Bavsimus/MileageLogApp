@@ -6,7 +6,12 @@ class CustomCupertinoListTile extends StatelessWidget {
   final Widget additionalInfo;
   final VoidCallback onTap;
 
-  const CustomCupertinoListTile({super.key, required this.title, required this.additionalInfo, required this.onTap});
+  const CustomCupertinoListTile({
+    super.key,
+    required this.title,
+    required this.additionalInfo,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,17 +23,25 @@ class CustomCupertinoListTile extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            DefaultTextStyle(style: CupertinoTheme.of(context).textTheme.textStyle, child: title),
+            DefaultTextStyle(
+              style: CupertinoTheme.of(context).textTheme.textStyle,
+              child: title,
+            ),
             Row(
               children: [
                 DefaultTextStyle(
-                  style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(color: CupertinoColors.secondaryLabel),
-                  child: additionalInfo
+                  style: CupertinoTheme.of(context).textTheme.textStyle
+                      .copyWith(color: CupertinoColors.secondaryLabel),
+                  child: additionalInfo,
                 ),
-                SizedBox(width: 6),
-                Icon(CupertinoIcons.chevron_up_chevron_down, size: 16, color: CupertinoColors.tertiaryLabel)
+                const SizedBox(width: 6),
+                const Icon(
+                  CupertinoIcons.chevron_up_chevron_down,
+                  size: 16,
+                  color: CupertinoColors.tertiaryLabel,
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),

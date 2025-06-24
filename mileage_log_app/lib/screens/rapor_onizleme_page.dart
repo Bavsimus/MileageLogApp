@@ -10,7 +10,7 @@ import '../models/arac_model.dart';
 class RaporOnizlemePage extends StatelessWidget {
   final Map<AracModel, List<List<dynamic>>> raporVerisi;
 
-  const RaporOnizlemePage({Key? key, required this.raporVerisi}) : super(key: key);
+  const RaporOnizlemePage({super.key, required this.raporVerisi});
 
   Future<void> _kaydetVePaylas(BuildContext context) async {
     // 1. Excel verisini hazırla
@@ -18,10 +18,13 @@ class RaporOnizlemePage extends StatelessWidget {
     for (var entry in raporVerisi.entries) {
       final arac = entry.key;
       final veriler = entry.value;
-      final sheet = excel['${arac.plaka.replaceAll(' ', '_')}'];
+      final sheet = excel[arac.plaka.replaceAll(' ', '_')];
       sheet.appendRow([
-        TextCellValue('Tarih'), TextCellValue('Gün Başı'), TextCellValue('Gün Sonu'),
-        TextCellValue('Yapılan KM'), TextCellValue('Güzergah')
+        TextCellValue('Tarih'),
+        TextCellValue('Gün Başı'),
+        TextCellValue('Gün Sonu'),
+        TextCellValue('Yapılan KM'),
+        TextCellValue('Güzergah'),
       ]);
       for (final satir in veriler) {
         sheet.appendRow([
@@ -36,13 +39,27 @@ class RaporOnizlemePage extends StatelessWidget {
     final fileBytes = excel.encode();
     if (fileBytes == null) {
       if (!context.mounted) return;
-      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(title: Text('Hata'), content: Text('Rapor dosyası oluşturulamadı.'), actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())]));
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Hata'),
+          content: const Text('Rapor dosyası oluşturulamadı.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text('Tamam'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
       return;
     }
 
     // 2. Dosyayı kalıcı olarak kaydet
     final now = DateTime.now();
-    final fileName = 'AracRaporu_${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}.xlsx';
+    final fileName =
+        'AracRaporu_${now.year}-${now.month}-${now.day}_${now.hour}-${now.minute}-${now.second}.xlsx';
     final directory = await getApplicationDocumentsDirectory();
     final path = '${directory.path}/$fileName';
     final file = File(path);
@@ -53,31 +70,42 @@ class RaporOnizlemePage extends StatelessWidget {
     // 3. Önce paylaş, sonra geri bildirim ver
     try {
       await Share.shareXFiles([XFile(path)], text: 'Araç Raporu');
-      
+
       // --- DEĞİŞİKLİK BURADA: SnackBar yerine CupertinoAlertDialog kullanılıyor ---
       if (context.mounted) {
         showCupertinoDialog(
           context: context,
           builder: (context) => CupertinoAlertDialog(
-            title: Text('Başarılı'),
-            content: Text('Rapor, "Tablolar" sekmesine kaydedildi ve paylaşıldı.'),
+            title: const Text('Başarılı'),
+            content: const Text(
+              'Rapor, "Tablolar" sekmesine kaydedildi ve paylaşıldı.',
+            ),
             actions: [
               CupertinoDialogAction(
                 isDefaultAction: true,
-                child: Text('Harika!'),
+                child: const Text('Harika!'),
                 onPressed: () => Navigator.of(context).pop(),
-              )
+              ),
             ],
           ),
         );
       }
-    } catch(e) {
+    } catch (e) {
       if (context.mounted) {
-        showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
-            title: Text('Paylaşım Hatası'),
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('Paylaşım Hatası'),
             content: Text('Dosya paylaşılırken bir hata oluştu: $e'),
-            actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
-        ));
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                child: const Text('Tamam'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
       }
     }
   }
@@ -86,14 +114,14 @@ class RaporOnizlemePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text("Rapor Önizleme"),
+        middle: const Text("Rapor Önizleme"),
         leading: CupertinoNavigationBarBackButton(
           previousPageTitle: 'Geri',
           onPressed: () => Navigator.of(context).pop(),
         ),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: Icon(CupertinoIcons.share),
+          child: const Icon(CupertinoIcons.share),
           onPressed: () => _kaydetVePaylas(context),
         ),
       ),
@@ -111,8 +139,16 @@ class RaporOnizlemePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                    child: Text('Araç: ${arac.plaka}', style: CupertinoTheme.of(context).textTheme.navTitleTextStyle),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 8.0,
+                    ),
+                    child: Text(
+                      'Araç: ${arac.plaka}',
+                      style: CupertinoTheme.of(
+                        context,
+                      ).textTheme.navTitleTextStyle,
+                    ),
                   ),
                   SizedBox(
                     height: 400,
@@ -121,11 +157,26 @@ class RaporOnizlemePage extends StatelessWidget {
                       horizontalMargin: 12,
                       minWidth: 600,
                       columns: [
-                        DataColumn2(label: Text('Tarih'), size: ColumnSize.L),
-                        DataColumn2(label: Text('Gün Başı'), numeric: true),
-                        DataColumn2(label: Text('Gün Sonu'), numeric: true),
-                        DataColumn2(label: Text('Yapılan KM'), numeric: true),
-                        DataColumn2(label: Text('Güzergah'), size: ColumnSize.L),
+                        DataColumn2(
+                          label: const Text('Tarih'),
+                          size: ColumnSize.L,
+                        ),
+                        DataColumn2(
+                          label: const Text('Gün Başı'),
+                          numeric: true,
+                        ),
+                        DataColumn2(
+                          label: const Text('Gün Sonu'),
+                          numeric: true,
+                        ),
+                        DataColumn2(
+                          label: const Text('Yapılan KM'),
+                          numeric: true,
+                        ),
+                        DataColumn2(
+                          label: const Text('Güzergah'),
+                          size: ColumnSize.L,
+                        ),
                       ],
                       rows: dataRows.map((row) {
                         return DataRow(

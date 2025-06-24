@@ -7,6 +7,8 @@ import '../models/arac_model.dart';
 import 'rapor_onizleme_page.dart';
 
 class TabloOlusturPage extends StatefulWidget {
+  const TabloOlusturPage({super.key});
+
   @override
   _TabloOlusturPageState createState() => _TabloOlusturPageState();
 }
@@ -45,9 +47,9 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   CupertinoButton(
-                    child: Text('Bitti'),
+                    child: const Text('Bitti'),
                     onPressed: () => Navigator.of(context).pop(),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -71,16 +73,27 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
   void _raporOlusturVeGoruntule(DateTime secilenAy) {
     final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
     if (seciliAraclar.isEmpty) {
-      showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
-        title: Text('Araç Seçilmedi'),
-        content: Text('Lütfen rapor oluşturmak için en az bir araç seçin.'),
-        actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
-      ));
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Araç Seçilmedi'),
+          content: const Text(
+            'Lütfen rapor oluşturmak için en az bir araç seçin.',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: const Text('Tamam'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
       return;
     }
 
     final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
-    
+
     for (final arac in seciliAraclar) {
       final List<List<dynamic>> aracSatirlari = [];
       final kmAralikParts = arac.kmAralik.split('-');
@@ -100,22 +113,27 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
         kmMin = kmMax;
         kmMax = temp;
       }
-      
+
       double baslangicKm = arac.gunBasiKm;
       final gunSayisi = DateTime(secilenAy.year, secilenAy.month + 1, 0).day;
 
       for (int day = 1; day <= gunSayisi; day++) {
         final tarih = DateTime(secilenAy.year, secilenAy.month, day);
-        
+
         if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
           aracSatirlari.add([
             '${tarih.day}.${tarih.month}.${tarih.year}',
-            '-', '-', 0, 'Hafta Sonu Tatil'
+            '-',
+            '-',
+            0,
+            'Hafta Sonu Tatil',
           ]);
-          continue; 
+          continue;
         }
 
-        final yapilanKm = (kmMax - kmMin == 0) ? kmMin : Random().nextInt(kmMax - kmMin + 1) + kmMin;
+        final yapilanKm = (kmMax - kmMin == 0)
+            ? kmMin
+            : Random().nextInt(kmMax - kmMin + 1) + kmMin;
         final gunSonuKm = baslangicKm + yapilanKm;
 
         aracSatirlari.add([
@@ -123,9 +141,9 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
           baslangicKm.toStringAsFixed(2),
           gunSonuKm.toStringAsFixed(2),
           yapilanKm,
-          arac.guzergah
+          arac.guzergah,
         ]);
-        
+
         baslangicKm = gunSonuKm;
       }
       raporVerisi[arac] = aracSatirlari;
@@ -142,7 +160,7 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
+      navigationBar: const CupertinoNavigationBar(
         middle: Text("Rapor Oluştur"),
       ),
       child: SafeArea(
@@ -152,7 +170,8 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
             Expanded(
               child: ListView.separated(
                 itemCount: tumAraclar.length,
-                separatorBuilder: (context, index) => const Divider(height: 1, indent: 56),
+                separatorBuilder: (context, index) =>
+                    const Divider(height: 1, indent: 56),
                 itemBuilder: (context, index) {
                   final arac = tumAraclar[index];
                   final bool isSelected = seciliIndexler.contains(index);
@@ -167,21 +186,40 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                      color: isSelected ? CupertinoColors.systemTeal.withOpacity(0.2) : Colors.transparent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 12.0,
+                      ),
+                      color: isSelected
+                          ? CupertinoColors.systemTeal.withOpacity(0.2)
+                          : Colors.transparent,
                       child: Row(
                         children: [
                           Icon(
-                            isSelected ? CupertinoIcons.check_mark_circled_solid : CupertinoIcons.circle,
-                            color: isSelected ? CupertinoColors.systemTeal : CupertinoColors.secondaryLabel,
+                            isSelected
+                                ? CupertinoIcons.check_mark_circled_solid
+                                : CupertinoIcons.circle,
+                            color: isSelected
+                                ? CupertinoColors.systemTeal
+                                : CupertinoColors.secondaryLabel,
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(arac.plaka, style: CupertinoTheme.of(context).textTheme.textStyle),
-                                Text(arac.guzergah, style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle),
+                                Text(
+                                  arac.plaka,
+                                  style: CupertinoTheme.of(
+                                    context,
+                                  ).textTheme.textStyle,
+                                ),
+                                Text(
+                                  arac.guzergah,
+                                  style: CupertinoTheme.of(
+                                    context,
+                                  ).textTheme.tabLabelTextStyle,
+                                ),
                               ],
                             ),
                           ),
@@ -192,7 +230,7 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
                 },
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -204,18 +242,22 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Rapor Ayı:', style: CupertinoTheme.of(context).textTheme.textStyle),
+                        Text(
+                          'Rapor Ayı:',
+                          style: CupertinoTheme.of(context).textTheme.textStyle,
+                        ),
                         Text(
                           DateFormat.yMMMM('tr_TR').format(_seciliTarih),
-                          style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontWeight: FontWeight.bold),
+                          style: CupertinoTheme.of(context).textTheme.textStyle
+                              .copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   CupertinoButton.filled(
-                      onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
-                      child: Text("Rapor Oluştur ve Görüntüle"),
+                    onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
+                    child: const Text("Rapor Oluştur ve Görüntüle"),
                   ),
                 ],
               ),
@@ -226,4 +268,3 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
     );
   }
 }
-
