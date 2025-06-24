@@ -76,6 +76,9 @@ class _AraclarPageState extends State<AraclarPage> {
           return;
         }
 
+    // Pop-up mesajını belirlemek için işlem türünü saklayalım
+    final bool isUpdating = _duzenlenenIndex != null;
+
     final arac = AracModel(
       plaka: plakaController.text.trim(),
       guzergah: seciliGuzergah,
@@ -101,6 +104,26 @@ class _AraclarPageState extends State<AraclarPage> {
     });
 
     await _saveAracList();
+
+    if (mounted) { // Widget'ın hala ekranda olduğundan emin ol
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: Text(isUpdating ? 'Başarıyla Güncellendi' : 'Başarıyla Kaydedildi'),
+          content: Text(isUpdating ? 'Araç bilgileri güncellendi.' : 'Yeni araç başarıyla eklendi.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: Text('Tamam'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            )
+          ],
+        ),
+      );
+    }
+    
   }
   
   void _editArac(int index){
