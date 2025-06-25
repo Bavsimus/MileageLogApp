@@ -76,6 +76,10 @@ class AracKarti extends StatelessWidget {
             color: CupertinoColors.tertiarySystemBackground,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
+              side: BorderSide(
+                color: CupertinoColors.systemGrey5.resolveFrom(context),
+                width: 1.0,
+              ),
               borderRadius: BorderRadius.circular(24.0),
             ),
             child: Container(
@@ -106,13 +110,13 @@ class AracKarti extends StatelessWidget {
                                 ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
 
                         // Dört bilgiyi iki sütuna ayırmak için bir Row kullanıyoruz.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // SOL SÜTUN
+                            // sol SÜTUN
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
@@ -132,8 +136,8 @@ class AracKarti extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8), // Sütunlar arası boşluk
-                            // SAĞ SÜTUN
+                            // sağ SÜTUN
+                            SizedBox(width: 36), // Sütunlar arasında boşluk
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
@@ -156,11 +160,11 @@ class AracKarti extends StatelessWidget {
                             ),
                           ],
                         ),
-                        SizedBox(height: 20),
+                        SizedBox(height: 26),
                         Center(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
+                            children: [ Expanded(child: 
                               // Düzenle Butonu
                               CupertinoButton(
                                 onPressed: onEdit,
@@ -177,6 +181,7 @@ class AracKarti extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                              ),
                               ),
                               const SizedBox(width: 8),
                               // Sil Butonu
