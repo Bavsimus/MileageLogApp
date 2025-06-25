@@ -6,13 +6,157 @@ import '../widgets/arac_karti.dart';
 import '../widgets/custom_cupertino_list_tile.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
+// --- YENİ WIDGET: Güzergah Yönetim Diyaloğu ---
+class GuzergahYonetimDialog extends StatefulWidget {
+  final List<String> initialGuzergahlar;
+  final List<AracModel> aracListesi;
+
+  const GuzergahYonetimDialog({
+    Key? key,
+    required this.initialGuzergahlar,
+    required this.aracListesi,
+  }) : super(key: key);
+
+  @override
+  _GuzergahYonetimDialogState createState() => _GuzergahYonetimDialogState();
+}
+
+class _GuzergahYonetimDialogState extends State<GuzergahYonetimDialog> {
+  late List<String> guzergahlar;
+  final TextEditingController textController = TextEditingController();
+  String? _duzenlenenGuzergah;
+
+  @override
+  void initState() {
+    super.initState();
+    // Başlangıç değerini state'e kopyalıyoruz
+    guzergahlar = List.from(widget.initialGuzergahlar);
+  }
+
+  Future<void> _saveGuzergahlar() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('guzergahlar', guzergahlar);
+  }
+
+  void _kaydetVeyaGuncelle() {
+    final yeniGuzergahAdi = textController.text.trim();
+    if (yeniGuzergahAdi.isEmpty) return;
+
+    if (_duzenlenenGuzergah != null) {
+      // Güncelleme modu
+      if (guzergahlar.contains(yeniGuzergahAdi) && yeniGuzergahAdi != _duzenlenenGuzergah) return; // Zaten var
+
+      final index = guzergahlar.indexOf(_duzenlenenGuzergah!);
+      if (index != -1) {
+        setState(() {
+          guzergahlar[index] = yeniGuzergahAdi;
+        });
+      }
+    } else {
+      // Ekleme modu
+      if (guzergahlar.contains(yeniGuzergahAdi)) return; // Zaten var
+      setState(() {
+        guzergahlar.add(yeniGuzergahAdi);
+      });
+    }
+
+    _saveGuzergahlar();
+    textController.clear();
+    setState(() {
+      _duzenlenenGuzergah = null;
+    });
+  }
+
+  void _duzenlemeModunuBaslat(String guzergah) {
+    setState(() {
+      _duzenlenenGuzergah = guzergah;
+      textController.text = guzergah;
+    });
+  }
+
+  void _sil(String guzergahToDelete) {
+    final bool isRouteInUse = widget.aracListesi.any((arac) => arac.guzergah == guzergahToDelete);
+
+    if (isRouteInUse) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: Text('Silinemez'),
+          content: Text('Bu güzergah bir araç tarafından kullanıldığı için silinemez.'),
+          actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Anladım'), onPressed: () => Navigator.of(context).pop())],
+        ),
+      );
+    } else {
+      setState(() {
+        guzergahlar.remove(guzergahToDelete);
+      });
+      _saveGuzergahlar();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Diyalog içeriğini oluşturan widget
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.2,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: CupertinoTextField(
+              controller: textController,
+              placeholder: _duzenlenenGuzergah == null ? 'Yeni Güzergah Ekle' : 'Güzergahı Düzenle',
+              suffix: CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: Icon(_duzenlenenGuzergah == null ? CupertinoIcons.add_circled : CupertinoIcons.check_mark),
+                onPressed: _kaydetVeyaGuncelle,
+              ),
+            ),
+          ),
+          Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              itemCount: guzergahlar.length,
+              separatorBuilder: (context, index) => Divider(height: 1),
+              itemBuilder: (context, index) {
+                final guzergah = guzergahlar[index];
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(guzergah),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            child: Icon(CupertinoIcons.trash, size: 20, color: CupertinoColors.systemRed),
+                            onPressed: () => _sil(guzergah),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+// --- YENİ WIDGET BİTTİ ---
+
+
 class AraclarPage extends StatefulWidget {
   @override
   _AraclarPageState createState() => _AraclarPageState();
 }
 
 class _AraclarPageState extends State<AraclarPage> {
-  // ... Bu sınıfın içindeki tüm metotlar ve değişkenler aynı kalıyor ...
+  // ... diğer değişkenler ...
   List<String> guzergahlar = [];
   List<AracModel> araclar = [];
   int? _duzenlenenIndex;
@@ -160,11 +304,15 @@ class _AraclarPageState extends State<AraclarPage> {
        }
     });
 
-    _scrollController.animateTo(
-      0.0,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _cancelEditing() {
@@ -238,6 +386,34 @@ class _AraclarPageState extends State<AraclarPage> {
       ),
     );
   }
+
+  // --- METOT GÜNCELLENDİ: Yeni ve güçlü diyaloğu gösterir ---
+  Future<void> _guzergahYonetimDialogGoster() async {
+    // Diyalog kapandığında güncellenmiş listeyi geri al
+    await showCupertinoDialog(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: Text('Güzergahları Yönet'),
+          content: GuzergahYonetimDialog(
+            initialGuzergahlar: guzergahlar,
+            aracListesi: araclar,
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: Text('Bitti'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Diyalog kapandıktan sonra ana sayfadaki güzergah listesini yenile
+                _loadGuzergahlar();
+              },
+            )
+          ],
+        );
+      },
+    );
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -245,14 +421,12 @@ class _AraclarPageState extends State<AraclarPage> {
       navigationBar: CupertinoNavigationBar(
         middle: Text('Araçlarım'),
       ),
-      // --- DEĞİŞİKLİK BURADA: ListView'ın kendisi AnimationLimiter ile sarmalandı ---
       child: AnimationLimiter(
         child: ListView(
           controller: _scrollController,
           padding: const EdgeInsets.all(16.0),
           children: [
             SizedBox(height: 88),
-            // --- DEĞİŞİKLİK BURADA: Başlık animasyon için sarmalandı ---
             AnimationConfiguration.staggeredList(
               position: 0,
               duration: const Duration(milliseconds: 375),
@@ -278,7 +452,6 @@ class _AraclarPageState extends State<AraclarPage> {
             SizedBox(height: 8),
             Divider(height: 1, color: CupertinoColors.systemGrey5),
             SizedBox(height: 16),
-            // --- DEĞİŞİKLİK BURADA: Form kartı animasyon için sarmalandı ---
             AnimationConfiguration.staggeredList(
               position: 1,
               duration: const Duration(milliseconds: 375),
@@ -302,7 +475,6 @@ class _AraclarPageState extends State<AraclarPage> {
                     ),
                     child: Column(
                       children: [
-                        // ... form içeriği aynı ...
                         SizedBox(height: 4),
                         CupertinoTextField(controller: plakaController, placeholder: 'Plaka',
                               padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
@@ -350,22 +522,28 @@ class _AraclarPageState extends State<AraclarPage> {
                               });
                             }),
                         SizedBox(height: 10),
-                        if (guzergahlar.isNotEmpty)
-                          CustomCupertinoListTile(
-                              title: Text('Güzergah'),
-                              additionalInfo: Text(seciliGuzergah),
-                              onTap: () {
-                                _showPicker(context, guzergahlar, seciliGuzergah,
-                                    (newValue) {
-                                  setState(() => seciliGuzergah = newValue);
-                                });
-                              })
-                        else
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0),
-                            child: Text("Önce bir güzergah ekleyin.",
-                                style: TextStyle(color: CupertinoColors.systemRed)),
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CustomCupertinoListTile(
+                                  title: Text('Güzergah'),
+                                  additionalInfo: Text(guzergahlar.isNotEmpty ? seciliGuzergah : 'Güzergah Yok'),
+                                  onTap: () {
+                                    if(guzergahlar.isNotEmpty) {
+                                       _showPicker(context, guzergahlar, seciliGuzergah,
+                                        (newValue) {
+                                      setState(() => seciliGuzergah = newValue);
+                                    });
+                                    }
+                                  }),
+                            ),
+                            CupertinoButton(
+                              padding: const EdgeInsets.only(left: 12.0),
+                              child: Icon(CupertinoIcons.settings), // İkonu değiştirdik
+                              onPressed: _guzergahYonetimDialogGoster,
+                            )
+                          ],
+                        ),
                         SizedBox(height: 20),
 
                         Row(
@@ -410,7 +588,6 @@ class _AraclarPageState extends State<AraclarPage> {
               ),
             ),
             SizedBox(height: 30),
-            // --- DEĞİŞİKLİK BURADA: Liste başlığı animasyon için sarmalandı ---
             AnimationConfiguration.staggeredList(
               position: 2,
               duration: const Duration(milliseconds: 375),
@@ -440,11 +617,18 @@ class _AraclarPageState extends State<AraclarPage> {
               Padding(
                 padding: const EdgeInsets.only(top: 40.0),
                 child: Center(
-                  // ... empty state kodu aynı ...
+                  child: Column(
+                    children: [
+                      Icon(CupertinoIcons.car_detailed,
+                          size: 60, color: CupertinoColors.secondaryLabel),
+                      SizedBox(height: 10),
+                      Text('Henüz araç eklenmedi.',
+                          style: CupertinoTheme.of(context).textTheme.textStyle)
+                    ],
+                  ),
                 ),
               )
             else
-              // --- DEĞİŞİKLİK BURADA: Kayıtlı araçlar listesi animasyonlu hale getirildi ---
               AnimationLimiter(
                 child: ListView.builder(
                   padding: EdgeInsets.zero,

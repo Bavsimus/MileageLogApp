@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'araclar_page.dart';
-import 'guzergah_ayar_page.dart';
 import 'tablo_olustur_page.dart';
 import 'tablolar_page.dart';
 
@@ -31,7 +30,6 @@ class _NavigationRootState extends State<NavigationRoot> {
     AraclarPage(),
     TabloOlusturPage(),
     TablolarPage(),
-    GuzergahAyarPage(),
   ];
 
   @override
@@ -41,7 +39,6 @@ class _NavigationRootState extends State<NavigationRoot> {
       {'icon': CupertinoIcons.car_detailed, 'label': 'Araçlar'},
       {'icon': CupertinoIcons.add_circled, 'label': 'Tablo Oluştur'},
       {'icon': CupertinoIcons.folder_fill, 'label': 'Tablolar'},
-      {'icon': CupertinoIcons.map_fill, 'label': 'Güzergah'},
     ];
 
     // Bu widget, her sayfanın kendi başlık çubuğuna sahip olması için

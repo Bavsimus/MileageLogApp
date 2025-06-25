@@ -110,7 +110,6 @@ class AracKarti extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-
                         // Dört bilgiyi iki sütuna ayırmak için bir Row kullanıyoruz.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
