@@ -67,13 +67,6 @@ class _GuzergahYonetimDialogState extends State<GuzergahYonetimDialog> {
     });
   }
 
-  void _duzenlemeModunuBaslat(String guzergah) {
-    setState(() {
-      _duzenlenenGuzergah = guzergah;
-      textController.text = guzergah;
-    });
-  }
-
   void _sil(String guzergahToDelete) {
     final bool isRouteInUse = widget.aracListesi.any((arac) => arac.guzergah == guzergahToDelete);
 
@@ -477,6 +470,14 @@ class _AraclarPageState extends State<AraclarPage> {
                       children: [
                         SizedBox(height: 4),
                         CupertinoTextField(controller: plakaController, placeholder: 'Plaka',
+                                prefix: Padding(
+                                    // İkonun kutunun kenarına yapışmaması için soluna boşluk veriyoruz.
+                                    padding: const EdgeInsets.only(left: 12.0), 
+                                    child: Icon(
+                                      CupertinoIcons.pano,
+                                      color: CupertinoColors.black,
+                                    ),
+                                  ),
                               padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
                               decoration: BoxDecoration(
                               color: CupertinoColors.systemGrey5.resolveFrom(context),
@@ -488,6 +489,14 @@ class _AraclarPageState extends State<AraclarPage> {
                             controller: kmBaslangicController,
                             keyboardType: TextInputType.number,
                             placeholder: 'Gün Başı KM',
+                            prefix: Padding(
+                                    // İkonun kutunun kenarına yapışmaması için soluna boşluk veriyoruz.
+                                    padding: const EdgeInsets.only(left: 12.0), 
+                                    child: Icon(
+                                      CupertinoIcons.gauge,
+                                      color: CupertinoColors.black,
+                                    ),
+                                  ),
                             padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
                             decoration: BoxDecoration(
                               color: CupertinoColors.systemGrey5.resolveFrom(context),
@@ -498,6 +507,14 @@ class _AraclarPageState extends State<AraclarPage> {
                         CupertinoTextField(
                             controller: kmAralikController,
                             placeholder: 'KM Aralığı (örn: 90-100)',
+                            prefix: Padding(
+                                    // İkonun kutunun kenarına yapışmaması için soluna boşluk veriyoruz.
+                                    padding: const EdgeInsets.only(left: 12.0), 
+                                    child: Icon(
+                                      CupertinoIcons.arrow_right_arrow_left_square,
+                                      color: CupertinoColors.black,
+                                    ),
+                                  ),
                             padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
                               decoration: BoxDecoration(
                               color: CupertinoColors.systemGrey5.resolveFrom(context),

@@ -144,7 +144,7 @@ class AracKarti extends StatelessWidget {
                                   _buildInfoRow(
                                     context,
                                     icon:
-                                        CupertinoIcons.arrow_left_right_square,
+                                        CupertinoIcons.arrow_right_arrow_left_square,
                                     text: arac.kmAralik,
                                   ),
                                   const SizedBox(height: 12),
