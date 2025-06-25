@@ -82,7 +82,7 @@ class AracKarti extends StatelessWidget {
               borderRadius: BorderRadius.circular(24.0),
             ),
             child: Container(
-              height: 220,
+              height: 140,
               padding: const EdgeInsets.fromLTRB(
                 12,
                 12,
@@ -109,7 +109,7 @@ class AracKarti extends StatelessWidget {
                                 ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 8),
 
                         // Dört bilgiyi iki sütuna ayırmak için bir Row kullanıyoruz.
                         Row(
@@ -158,58 +158,6 @@ class AracKarti extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                        SizedBox(height: 26),
-                        Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [ Expanded(child: 
-                              // Düzenle Butonu
-                              CupertinoButton(
-                                onPressed: onEdit,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                color: CupertinoColors.systemTeal,
-                                borderRadius: BorderRadius.circular(16.0),
-                                child: const Text(
-                                  'Düzenle',
-                                  style: TextStyle(
-                                    color: CupertinoColors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Sil Butonu
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: CupertinoColors.systemRed,
-                                    width: 1.0,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16.0),
-                                ),
-                                child: CupertinoButton(
-                                  onPressed: onDelete,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 8,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16.0),
-                                  child: const Text(
-                                    'Sil',
-                                    style: TextStyle(
-                                      color: CupertinoColors.systemRed,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ],
                     ),

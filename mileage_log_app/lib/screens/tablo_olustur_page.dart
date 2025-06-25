@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/arac_model.dart';
 import 'rapor_onizleme_page.dart';
+import '../widgets/arac_karti_minimized.dart';
 
 class TabloOlusturPage extends StatefulWidget {
   const TabloOlusturPage({super.key});
@@ -161,110 +162,117 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text("Rapor Oluştur"),
+        middle: Text("Rapor İçin Araç Seç"),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
+      // DEĞİŞİKLİK: En dıştaki SafeArea kaldırıldı, child doğrudan Stack oldu.
+      child: Stack(
           children: [
-            Expanded(
-              child: ListView.separated(
-                itemCount: tumAraclar.length,
-                separatorBuilder: (context, index) =>
-                    const Divider(height: 1, indent: 56),
-                itemBuilder: (context, index) {
-                  final arac = tumAraclar[index];
-                  final bool isSelected = seciliIndexler.contains(index);
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (isSelected) {
-                          seciliIndexler.remove(index);
-                        } else {
-                          seciliIndexler.add(index);
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 12.0,
+            ListView.builder(
+              padding: const EdgeInsets.fromLTRB(0, 120, 0, 160), 
+              itemCount: tumAraclar.length,
+              itemBuilder: (context, index) {
+                final arac = tumAraclar[index];
+                final bool isSelected = seciliIndexler.contains(index);
+
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        seciliIndexler.remove(index);
+                      } else {
+                        seciliIndexler.add(index);
+                      }
+                    });
+                  },
+                  child: Stack(
+                    children: [
+                      // AracKarti'nın kenarlarında kendi boşluğu olmaması için
+                      // onu bir Padding ile sarmalıyoruz.
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: AracKarti(
+                          arac: arac,
+                          onEdit: () {},
+                          onDelete: () {},
+                        ),
                       ),
-                      color: isSelected
-                          ? CupertinoColors.systemTeal.withOpacity(0.2)
-                          : Colors.transparent,
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected
-                                ? CupertinoIcons.check_mark_circled_solid
-                                : CupertinoIcons.circle,
-                            color: isSelected
-                                ? CupertinoColors.systemTeal
-                                : CupertinoColors.secondaryLabel,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  arac.plaka,
-                                  style: CupertinoTheme.of(
-                                    context,
-                                  ).textTheme.textStyle,
-                                ),
-                                Text(
-                                  arac.guzergah,
-                                  style: CupertinoTheme.of(
-                                    context,
-                                  ).textTheme.tabLabelTextStyle,
-                                ),
-                              ],
+                      if (isSelected)
+                        Positioned.fill(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.systemTeal.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(
+                                color: CupertinoColors.systemTeal,
+                                width: 2.5,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                CupertinoIcons.check_mark_circled,
+                                color: Colors.white,
+                                size: 50,
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
-
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    onPressed: _aySeciciGoster,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Rapor Ayı:',
-                          style: CupertinoTheme.of(context).textTheme.textStyle,
-                        ),
-                        Text(
-                          DateFormat.yMMMM('tr_TR').format(_seciliTarih),
-                          style: CupertinoTheme.of(context).textTheme.textStyle
-                              .copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
+            
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24.0),
+                  border: Border(
+                    top: BorderSide(
+                      color: CupertinoColors.systemGrey5,
+                      width: 1.0,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  CupertinoButton.filled(
-                    onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
-                    child: const Text("Rapor Oluştur ve Görüntüle"),
+                  color: CupertinoTheme.of(context).barBackgroundColor.withOpacity(0.9),
+                ),
+                child: Padding(
+                  // Telefonun altındaki sistem boşluğunu da hesaba katıyoruz
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CupertinoButton(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        onPressed: _aySeciciGoster,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Rapor Ayı:',
+                              style: CupertinoTheme.of(context).textTheme.textStyle,
+                            ),
+                            Text(
+                              DateFormat.yMMMM('tr_TR').format(_seciliTarih),
+                              style: CupertinoTheme.of(context).textTheme.textStyle
+                                  .copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      CupertinoButton.filled(
+                        onPressed: () => _raporOlusturVeGoruntule(_seciliTarih),
+                        child: const Text("Rapor Oluştur ve Görüntüle"),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
         ),
-      ),
     );
   }
 }
