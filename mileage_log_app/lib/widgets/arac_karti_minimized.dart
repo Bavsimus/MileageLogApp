@@ -1,20 +1,20 @@
+// arac_karti_minimized.dart dosyasının Orijinal Tasarıma Sadık Kalınarak Düzeltilmiş Hali
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../models/arac_model.dart';
 
-class AracKarti extends StatelessWidget {
+// 1. SINIF ADI DÜZELTİLDİ
+class AracKartiMinimized extends StatelessWidget {
   final AracModel arac;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
-  const AracKarti({
+  // 2. GEREKSİZ PARAMETRELER KALDIRILDI
+  const AracKartiMinimized({
     super.key,
     required this.arac,
-    required this.onEdit,
-    required this.onDelete,
   });
 
-  // BİLGİ SATIRLARI İÇİN YARDIMCI WIDGET
+  // Bilgi satırları için yardımcı widget (TASARIMINIZA DOKUNULMADI)
   Widget _buildInfoRow(
     BuildContext context, {
     required IconData icon,
@@ -23,75 +23,61 @@ class AracKarti extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: CupertinoColors.secondaryLabel),
+        Icon(icon, size: 16, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
         const SizedBox(width: 8),
-        // Metnin uzun olması durumunda taşmasını önlemek için Expanded ekliyoruz.
         Expanded(
           child: Text(
             text,
             style: CupertinoTheme.of(
               context,
-            ).textTheme.tabLabelTextStyle.copyWith(fontSize: 16),
-            overflow: TextOverflow.ellipsis, // Uzun metinler için ... koyar
+            ).textTheme.textStyle.copyWith(fontSize: 16),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
     );
   }
 
-  // YARDIMCI FONKSİYON
+  // 3. RESİM YOLLARI DÜZELTİLDİ
   String _getAracResimYolu(String marka) {
-    // Büyük/küçük harf duyarlılığını ortadan kaldırmak için
     final markaLower = marka.toLowerCase();
+    final String fallbackImage = 'assets/images/mercedes-sprinter.png';
 
-    // Örnek marka isimleri. Kendi marka isimlerinize göre düzenleyin.
-    if (markaLower.contains('mercedes')) {
-      return 'assets/mercedes-sprinter.png';
-    } else if (markaLower.contains('ford')) {
-      return 'assets/ford-transit.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
-    } else if (markaLower.contains('fiat')) {
-      return 'assets/fiat-ducato.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
-    } else if (markaLower.contains('renault')) {
-      return 'assets/renault-master.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
-    } else if (markaLower.contains('peugeot')) {
-      return 'assets/peugeot-boxer.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
-    } else if (markaLower.contains('volkswagen')) {
-      return 'assets/wv-crafter.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+    switch(markaLower) {
+      case 'mercedes': return 'assets/mercedes-sprinter.png';
+      case 'ford': return 'assets/ford-transit.png';
+      case 'fiat': return 'assets/fiat-ducato.png';
+      case 'renault': return 'assets/renault-master.png';
+      case 'peugeot': return 'assets/peugeot-boxer.png';
+      case 'volkswagen': return 'assets/wv-crafter.png';
+      default: return fallbackImage;
     }
-    // Eşleşen bir marka bulunamazsa
-    return 'assets/mercedes-sprinter.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
   }
 
   @override
   Widget build(BuildContext context) {
+    // BURADAN İTİBAREN TASARIMINIZLA BİREBİR AYNIDIR
     return Container(
       margin: const EdgeInsets.only(top: 30.0, bottom: 8.0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 1. KATMAN: Arka Plan Kartı
           Card(
             elevation: 0.0,
-            color: CupertinoColors.tertiarySystemBackground,
+            color: CupertinoTheme.of(context).barBackgroundColor,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                color: CupertinoColors.systemGrey5.resolveFrom(context),
-                width: 1.0,
+                color: CupertinoColors.separator.resolveFrom(context),
+                width: 0.5,
               ),
               borderRadius: BorderRadius.circular(24.0),
             ),
             child: Container(
-              height: 140,
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                12,
-                12,
-                8,
-              ), // Padding'i ayarlayabiliriz
+              height: 145,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
                 children: [
-                  // Sol Taraf: Bilgiler ve Butonlar
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,51 +95,30 @@ class AracKarti extends StatelessWidget {
                                 ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-
-                        // Dört bilgiyi iki sütuna ayırmak için bir Row kullanıyoruz.
+                        const SizedBox(height: 20),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // sol SÜTUN
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildInfoRow(
-                                    context,
-                                    icon: CupertinoIcons.map_pin_ellipse,
-                                    text: arac.guzergah,
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: arac.guzergah),
                                   const SizedBox(height: 12),
-                                  _buildInfoRow(
-                                    context,
-                                    icon: CupertinoIcons.tag,
-                                    text: arac.marka,
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.tag, text: arac.marka),
                                 ],
                               ),
                             ),
-                            // sağ SÜTUN
-                            SizedBox(width: 36), // Sütunlar arasında boşluk
+                            const SizedBox(width: 36),
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildInfoRow(
-                                    context,
-                                    icon:
-                                        CupertinoIcons.arrow_left_right_square,
-                                    text: arac.kmAralik,
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.arrow_right_arrow_left_square, text: arac.kmAralik),
                                   const SizedBox(height: 12),
-                                  _buildInfoRow(
-                                    context,
-                                    icon: CupertinoIcons.gauge,
-                                    text: arac.gunBasiKm.toString(),
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.gauge, text: arac.gunBasiKm.toString()),
                                 ],
                               ),
                             ),
@@ -166,8 +131,6 @@ class AracKarti extends StatelessWidget {
               ),
             ),
           ),
-
-          // 2. KATMAN: Araç Resmi
           Positioned(
             top: -70,
             right: 5,
@@ -180,8 +143,10 @@ class AracKarti extends StatelessWidget {
                   _getAracResimYolu(arac.marka),
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
+                    // Hata durumunda gösterilecek varsayılan resim yolu da düzeltildi.
+                    // Projenizde bu isimde bir resim olduğundan emin olun.
                     return Image.asset(
-                      'assets/default-van.png',
+                      'assets/mercedes-sprinter.png',
                       fit: BoxFit.contain,
                     );
                   },

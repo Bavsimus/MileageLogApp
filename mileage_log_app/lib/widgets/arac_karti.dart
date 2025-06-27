@@ -23,16 +23,16 @@ class AracKarti extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: CupertinoColors.secondaryLabel),
+        Icon(icon, size: 16, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
         const SizedBox(width: 8),
-        // Metnin uzun olması durumunda taşmasını önlemek için Expanded ekliyoruz.
         Expanded(
           child: Text(
             text,
+            // --- DEĞİŞİKLİK BURADA: Daha belirgin bir metin stili kullanıldı ---
             style: CupertinoTheme.of(
               context,
-            ).textTheme.tabLabelTextStyle.copyWith(fontSize: 16),
-            overflow: TextOverflow.ellipsis, // Uzun metinler için ... koyar
+            ).textTheme.textStyle.copyWith(fontSize: 16), // tabLabelTextStyle -> textStyle
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -41,25 +41,21 @@ class AracKarti extends StatelessWidget {
 
   // YARDIMCI FONKSİYON
   String _getAracResimYolu(String marka) {
-    // Büyük/küçük harf duyarlılığını ortadan kaldırmak için
     final markaLower = marka.toLowerCase();
-
-    // Örnek marka isimleri. Kendi marka isimlerinize göre düzenleyin.
     if (markaLower.contains('mercedes')) {
       return 'assets/mercedes-sprinter.png';
     } else if (markaLower.contains('ford')) {
-      return 'assets/ford-transit.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+      return 'assets/ford-transit.png';
     } else if (markaLower.contains('fiat')) {
-      return 'assets/fiat-ducato.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+      return 'assets/fiat-ducato.png';
     } else if (markaLower.contains('renault')) {
-      return 'assets/renault-master.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+      return 'assets/renault-master.png';
     } else if (markaLower.contains('peugeot')) {
-      return 'assets/peugeot-boxer.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+      return 'assets/peugeot-boxer.png';
     } else if (markaLower.contains('volkswagen')) {
-      return 'assets/wv-crafter.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+      return 'assets/wv-crafter.png';
     }
-    // Eşleşen bir marka bulunamazsa
-    return 'assets/mercedes-sprinter.png'; // Bu dosyanın assets klasöründe olduğundan emin olun
+    return 'assets/mercedes-sprinter.png';
   }
 
   @override
@@ -69,29 +65,22 @@ class AracKarti extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 1. KATMAN: Arka Plan Kartı
           Card(
             elevation: 0.0,
-            color: CupertinoColors.tertiarySystemBackground,
+            color: CupertinoTheme.of(context).barBackgroundColor,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                color: CupertinoColors.systemGrey5.resolveFrom(context),
-                width: 1.0,
+                color: CupertinoColors.separator.resolveFrom(context),
+                width: 0.5,
               ),
               borderRadius: BorderRadius.circular(24.0),
             ),
             child: Container(
               height: 220,
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                12,
-                12,
-                8,
-              ), // Padding'i ayarlayabiliriz
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
                 children: [
-                  // Sol Taraf: Bilgiler ve Butonlar
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,49 +99,29 @@ class AracKarti extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Dört bilgiyi iki sütuna ayırmak için bir Row kullanıyoruz.
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // sol SÜTUN
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildInfoRow(
-                                    context,
-                                    icon: CupertinoIcons.map_pin_ellipse,
-                                    text: arac.guzergah,
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: arac.guzergah),
                                   const SizedBox(height: 12),
-                                  _buildInfoRow(
-                                    context,
-                                    icon: CupertinoIcons.tag,
-                                    text: arac.marka,
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.tag, text: arac.marka),
                                 ],
                               ),
                             ),
-                            // sağ SÜTUN
-                            SizedBox(width: 36), // Sütunlar arasında boşluk
+                            SizedBox(width: 36),
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildInfoRow(
-                                    context,
-                                    icon:
-                                        CupertinoIcons.arrow_right_arrow_left_square,
-                                    text: arac.kmAralik,
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.arrow_right_arrow_left_square, text: arac.kmAralik),
                                   const SizedBox(height: 12),
-                                  _buildInfoRow(
-                                    context,
-                                    icon: CupertinoIcons.gauge,
-                                    text: arac.gunBasiKm.toString(),
-                                  ),
+                                  _buildInfoRow(context, icon: CupertinoIcons.gauge, text: arac.gunBasiKm.toString()),
                                 ],
                               ),
                             ),
@@ -163,45 +132,37 @@ class AracKarti extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [ Expanded(child: 
-                              // Düzenle Butonu
                               CupertinoButton(
                                 onPressed: onEdit,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                color: CupertinoColors.systemTeal,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                color: CupertinoTheme.of(context).primaryColor,
                                 borderRadius: BorderRadius.circular(16.0),
                                 child: const Text(
                                   'Düzenle',
                                   style: TextStyle(
-                                    color: CupertinoColors.white,
+                                    color: CupertinoColors.darkBackgroundGray,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                               ),
                               const SizedBox(width: 8),
-                              // Sil Butonu
                               Container(
                                 decoration: BoxDecoration(
                                   border: Border.all(
-                                    color: CupertinoColors.systemRed,
+                                    color: CupertinoColors.destructiveRed,
                                     width: 1.0,
                                   ),
                                   borderRadius: BorderRadius.circular(16.0),
                                 ),
                                 child: CupertinoButton(
                                   onPressed: onDelete,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 8,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
                                   borderRadius: BorderRadius.circular(16.0),
                                   child: const Text(
                                     'Sil',
                                     style: TextStyle(
-                                      color: CupertinoColors.systemRed,
+                                      color: CupertinoColors.destructiveRed,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -218,7 +179,6 @@ class AracKarti extends StatelessWidget {
             ),
           ),
 
-          // 2. KATMAN: Araç Resmi
           Positioned(
             top: -70,
             right: 5,

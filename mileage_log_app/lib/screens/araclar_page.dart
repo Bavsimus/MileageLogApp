@@ -5,6 +5,7 @@ import '../models/arac_model.dart';
 import '../widgets/arac_karti.dart';
 import '../widgets/custom_cupertino_list_tile.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:flutter/services.dart';
 
 // --- YENİ WIDGET: Güzergah Yönetim Diyaloğu ---
 class GuzergahYonetimDialog extends StatefulWidget {
@@ -86,7 +87,7 @@ class _GuzergahYonetimDialogState extends State<GuzergahYonetimDialog> {
       _saveGuzergahlar();
     }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     // Diyalog içeriğini oluşturan widget
@@ -140,7 +141,311 @@ class _GuzergahYonetimDialogState extends State<GuzergahYonetimDialog> {
     );
   }
 }
-// --- YENİ WIDGET BİTTİ ---
+class MarkaSecici extends StatelessWidget {
+  final List<String> markalar;
+  final String seciliMarka;
+  final ValueChanged<String> onMarkaSecildi;
+  final bool isEditing;
+
+  const MarkaSecici({
+    Key? key,
+    required this.markalar,
+    required this.seciliMarka,
+    required this.onMarkaSecildi,
+    required this.isEditing,
+  }) : super(key: key);
+
+  String _getLogoPathForMarka(String marka) {
+    switch (marka.toLowerCase()) {
+      case 'mercedes':
+        return 'assets/mercedes_logo.png';
+      case 'ford':
+        return 'assets/ford_logo.png';
+      case 'fiat':
+        return 'assets/fiat_logo.png';
+      case 'renault':
+        return 'assets/renault_logo.png';
+      case 'volkswagen':
+        return 'assets/vw_logo.png';
+      case 'peugeot':
+        return 'assets/peugeot_logo.png';
+      default:
+        return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = isEditing 
+        ? CupertinoColors.systemOrange 
+        : CupertinoTheme.of(context).primaryColor;
+
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: markalar.length,
+        itemBuilder: (context, index) {
+          final marka = markalar[index];
+          final isSelected = marka == seciliMarka;
+          final logoPath = _getLogoPathForMarka(marka);
+
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact(); // Titreşim eklendi
+              onMarkaSecildi(marka);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              width: 90,
+              margin: const EdgeInsets.symmetric(horizontal: 6.0),
+              transform: isSelected ? (Matrix4.identity()..scale(1.01)) : Matrix4.identity(),
+              transformAlignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: CupertinoTheme.of(context).barBackgroundColor,
+                borderRadius: BorderRadius.circular(16.0),
+                border: Border.all(
+                  color: isSelected
+                      ? activeColor
+                      : CupertinoColors.systemGrey5.resolveFrom(context),
+                  width: isSelected ? 1.5 : 1.5,
+                ),
+              ),
+              // --- DÜZELTME: Kaybolan içerik geri eklendi ---
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  logoPath.isEmpty
+                      ? CircleAvatar(
+                          radius: 26,
+                          backgroundColor: CupertinoColors.systemGrey5.resolveFrom(context),
+                          child: Icon(
+                            CupertinoIcons.car_detailed,
+                            color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                            size: 28,
+                          ),
+                        )
+                      : Image.asset(
+                          logoPath,
+                          height: 52,
+                          width: 52,
+                          errorBuilder: (context, error, stackTrace) {
+                             return CircleAvatar(
+                                radius: 26,
+                                backgroundColor: CupertinoColors.systemGrey5.resolveFrom(context),
+                                child: Icon(
+                                  CupertinoIcons.exclamationmark_triangle,
+                                  color: CupertinoColors.systemRed,
+                                  size: 28,
+                                ),
+                              );
+                          },
+                        ),
+                  const SizedBox(height: 8),
+                  Text(
+                    marka,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? activeColor
+                          : CupertinoTheme.of(context).textTheme.textStyle.color,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// --- HAFTA SONU DURUMU SEÇİM WIDGET'I ---
+// --- HAFTA SONU DURUMU SEÇİM WIDGET'I ---
+class HaftasonuSecici extends StatelessWidget {
+  final String seciliDurum;
+  final ValueChanged<String> onDurumSecildi;
+  final bool isEditing;
+  final List<String> durumlar = const ['Çalışıyor', 'Çalışmıyor'];
+
+  const HaftasonuSecici({
+    Key? key,
+    required this.seciliDurum,
+    required this.onDurumSecildi,
+    required this.isEditing,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = isEditing 
+        ? CupertinoColors.systemOrange 
+        : CupertinoTheme.of(context).primaryColor;
+
+    return Row(
+      children: durumlar.map((durum) {
+        final isSelected = durum == seciliDurum;
+        final iconData = durum == 'Çalışıyor' 
+            ? CupertinoIcons.sun_max_fill 
+            : CupertinoIcons.moon_stars_fill;
+
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => onDurumSecildi(durum),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              height: 80,
+              margin: const EdgeInsets.symmetric(horizontal: 4.0),
+              transform: isSelected ? (Matrix4.identity()..scale(1.01)) : Matrix4.identity(),
+              transformAlignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: CupertinoTheme.of(context).barBackgroundColor,
+                borderRadius: BorderRadius.circular(16.0),
+                border: Border.all(
+                  color: isSelected
+                      ? activeColor
+                      : CupertinoColors.systemGrey5.resolveFrom(context),
+                  width: isSelected ? 1.5 : 1.5,
+                ),
+              ),
+              // --- DÜZELTME: Kaybolan içerik geri eklendi ---
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    iconData,
+                    size: 28,
+                    color: isSelected
+                        ? activeColor
+                        : CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    durum,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? activeColor
+                          : CupertinoTheme.of(context).textTheme.textStyle.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// --- GÜZERGAH SEÇİM WIDGET'I ---
+class GuzergahSecici extends StatelessWidget {
+  final List<String> guzergahlar;
+  final String seciliGuzergah;
+  final ValueChanged<String> onGuzergahSecildi;
+  final bool isEditing;
+
+  const GuzergahSecici({
+    Key? key,
+    required this.guzergahlar,
+    required this.seciliGuzergah,
+    required this.onGuzergahSecildi,
+    required this.isEditing,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = isEditing 
+        ? CupertinoColors.systemOrange 
+        : CupertinoTheme.of(context).primaryColor;
+        
+    if (guzergahlar.isEmpty) {
+      return Container(
+        height: 80,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemGrey6.resolveFrom(context),
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        child: Text(
+          'Lütfen önce güzergah ekleyin.',
+          style: TextStyle(color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 90,
+      child: ListView.builder(
+        controller: ScrollController(),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        physics: const BouncingScrollPhysics(),
+        scrollDirection: Axis.horizontal,
+        itemCount: guzergahlar.length,
+        itemBuilder: (context, index) {
+          final guzergah = guzergahlar[index];
+          final isSelected = guzergah == seciliGuzergah;
+
+          return GestureDetector(
+            onTap: () => onGuzergahSecildi(guzergah),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              width: 130,
+              margin: const EdgeInsets.symmetric(horizontal: 6.0),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              transform: isSelected ? (Matrix4.identity()..scale(1.01)) : Matrix4.identity(),
+              transformAlignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: CupertinoTheme.of(context).barBackgroundColor,
+                borderRadius: BorderRadius.circular(16.0),
+                border: Border.all(
+                  color: isSelected
+                      ? activeColor
+                      : CupertinoColors.systemGrey5.resolveFrom(context),
+                  width: isSelected ? 1.5 : 1.5,
+                ),
+              ),
+              // --- DÜZELTME: Kaybolan içerik geri eklendi ---
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    CupertinoIcons.map_pin_ellipse,
+                    size: 28,
+                    color: isSelected
+                        ? activeColor
+                        : CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    guzergah,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? activeColor
+                          : CupertinoTheme.of(context).textTheme.textStyle.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
 
 class AraclarPage extends StatefulWidget {
@@ -213,6 +518,7 @@ class _AraclarPageState extends State<AraclarPage> {
   }
 
   Future<void> _saveOrUpdateArac() async {
+    HapticFeedback.lightImpact();
     if (plakaController.text.isEmpty ||
         kmBaslangicController.text.isEmpty ||
         kmAralikController.text.isEmpty ||
@@ -309,6 +615,7 @@ class _AraclarPageState extends State<AraclarPage> {
   }
 
   void _cancelEditing() {
+    HapticFeedback.lightImpact();
     setState(() {
       _duzenlenenIndex = null;
       plakaController.clear();
@@ -411,15 +718,12 @@ class _AraclarPageState extends State<AraclarPage> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('Araçlarım'),
-      ),
       child: AnimationLimiter(
         child: ListView(
           controller: _scrollController,
           padding: const EdgeInsets.all(16.0),
           children: [
-            SizedBox(height: 88),
+            SizedBox(height: 40),
             AnimationConfiguration.staggeredList(
               position: 0,
               duration: const Duration(milliseconds: 375),
@@ -434,8 +738,8 @@ class _AraclarPageState extends State<AraclarPage> {
                         style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
                       ),
                       Icon(
-                        _duzenlenenIndex == null ? CupertinoIcons.add_circled : CupertinoIcons.pencil_circle_fill,
-                        color: CupertinoColors.secondaryLabel,
+                        _duzenlenenIndex == null ? CupertinoIcons.add : CupertinoIcons.pencil_circle_fill,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(context),
                       ),
                     ],
                   ),
@@ -454,7 +758,7 @@ class _AraclarPageState extends State<AraclarPage> {
                   child: Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: CupertinoColors.tertiarySystemBackground,
+                      color: CupertinoTheme.of(context).barBackgroundColor,
                       borderRadius: BorderRadius.circular(24.0),
                       border: _duzenlenenIndex != null
                           ? Border.all(
@@ -475,7 +779,7 @@ class _AraclarPageState extends State<AraclarPage> {
                                     padding: const EdgeInsets.only(left: 12.0), 
                                     child: Icon(
                                       CupertinoIcons.pano,
-                                      color: CupertinoColors.black,
+                                      color: CupertinoColors.secondaryLabel.resolveFrom(context),
                                     ),
                                   ),
                               padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
@@ -494,7 +798,7 @@ class _AraclarPageState extends State<AraclarPage> {
                                     padding: const EdgeInsets.only(left: 12.0), 
                                     child: Icon(
                                       CupertinoIcons.gauge,
-                                      color: CupertinoColors.black,
+                                      color: CupertinoColors.secondaryLabel.resolveFrom(context),
                                     ),
                                   ),
                             padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
@@ -512,7 +816,7 @@ class _AraclarPageState extends State<AraclarPage> {
                                     padding: const EdgeInsets.only(left: 12.0), 
                                     child: Icon(
                                       CupertinoIcons.arrow_right_arrow_left_square,
-                                      color: CupertinoColors.black,
+                                      color: CupertinoColors.secondaryLabel.resolveFrom(context),
                                     ),
                                   ),
                             padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
@@ -522,46 +826,99 @@ class _AraclarPageState extends State<AraclarPage> {
                             ),
                             ),
                         
-                        SizedBox(height: 24),
-                        CustomCupertinoListTile(title: Text('Marka'), additionalInfo: Text(seciliMarka), onTap: () {
-                           _showPicker(context, _markalar, seciliMarka, (newValue) {
-                              setState(() => seciliMarka = newValue);
-                           });
-                        }),
-                        SizedBox(height: 10),
-                        CustomCupertinoListTile(
-                            title: Text('Hafta Sonu Durumu'),
-                            additionalInfo: Text(haftasonuDurumu),
-                            onTap: () {
-                              _showPicker(context, ['Çalışıyor', 'Çalışmıyor'],
-                                  haftasonuDurumu, (newValue) {
-                                setState(() => haftasonuDurumu = newValue);
-                              });
-                            }),
-                        SizedBox(height: 10),
+                        // --- YENİ KOD ---
+// ...
+                        SizedBox(height: 12),
+                        // Başlık
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+                          child: Text(
+                            'Marka',
+                            style: TextStyle(
+                              fontSize: 17.0,
+                              color: CupertinoTheme.of(context).textTheme.textStyle.color,
+                            ),
+                          ),
+                        ),
+                        // Yeni Marka Seçim Widget'ımız
+                        MarkaSecici(
+                        markalar: _markalar,
+                        seciliMarka: seciliMarka,
+                        isEditing: _duzenlenenIndex != null, // <-- EKLENDİ
+                        onMarkaSecildi: (yeniMarka) {
+                          setState(() {
+                            seciliMarka = yeniMarka;
+                          });
+                        },
+                      ),
+                        
+                        SizedBox(height: 0), // Marka seçici ile altındaki eleman arasına boşluk
+                        // ...
+                        // --- YENİ KOD ---
+                        SizedBox(height: 16),
+                        // Hafta Sonu Durumu Başlığı
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+                          child: Text(
+                            'Hafta Sonu Durumu',
+                            style: TextStyle(
+                              fontSize: 17.0,
+                              color: CupertinoTheme.of(context).textTheme.textStyle.color,
+                            ),
+                          ),
+                        ),
+                        // Yeni Hafta Sonu Seçim Widget'ı
+                        HaftasonuSecici(
+                        seciliDurum: haftasonuDurumu,
+                        isEditing: _duzenlenenIndex != null, // <-- EKLENDİ
+                        onDurumSecildi: (yeniDurum) {
+                          setState(() {
+                            haftasonuDurumu = yeniDurum;
+                          });
+                        },
+                      ),
+                        // Güzergah Başlığı ve Yönetim Butonu
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: CustomCupertinoListTile(
-                                  title: Text('Güzergah'),
-                                  additionalInfo: Text(guzergahlar.isNotEmpty ? seciliGuzergah : 'Güzergah Yok'),
-                                  onTap: () {
-                                    if(guzergahlar.isNotEmpty) {
-                                       _showPicker(context, guzergahlar, seciliGuzergah,
-                                        (newValue) {
-                                      setState(() => seciliGuzergah = newValue);
-                                    });
-                                    }
-                                  }),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Text(
+                                'Güzergah',
+                                style: TextStyle(
+                                  fontSize: 17.0,
+                                  color: CupertinoTheme.of(context).textTheme.textStyle.color,
+                                ),
+                              ),
                             ),
                             CupertinoButton(
-                              padding: const EdgeInsets.only(left: 12.0),
-                              child: Icon(CupertinoIcons.settings), // İkonu değiştirdik
+                              padding: const EdgeInsets.only(right: 4.0),
+                              child: Row(
+                                children: [
+                                  Icon(CupertinoIcons.settings, size: 20),
+                                  SizedBox(width: 4),
+                                  Text("Yönet"),
+                                ],
+                              ),
                               onPressed: _guzergahYonetimDialogGoster,
                             )
                           ],
                         ),
-                        SizedBox(height: 20),
+                        SizedBox(height: 0),
+
+                        // Yeni Güzergah Seçim Widget'ı
+                        // Yeni Güzergah Seçim Widget'ı
+                        GuzergahSecici(
+                          guzergahlar: guzergahlar,
+                          seciliGuzergah: seciliGuzergah,
+                          isEditing: _duzenlenenIndex != null, // <-- EKLENDİ
+                          onGuzergahSecildi: (yeniGuzergah) {
+                            setState(() {
+                              seciliGuzergah = yeniGuzergah;
+                            });
+                          },
+                        ),
+                        SizedBox(height: 12),
 
                         Row(
                           children: [
@@ -569,13 +926,13 @@ class _AraclarPageState extends State<AraclarPage> {
                               child: CupertinoButton(
                                 borderRadius: BorderRadius.circular(16.0),
                                 color: _duzenlenenIndex == null 
-                                  ? CupertinoColors.systemTeal
+                                  ? CupertinoTheme.of(context).primaryColor
                                   : CupertinoColors.systemOrange,
                                 onPressed: _saveOrUpdateArac,
                                 child: Text(
                                   _duzenlenenIndex == null ? 'Kaydet' : 'Güncelle',
                                    style: TextStyle(
-                                    color: CupertinoColors.white,
+                                    color: CupertinoColors.darkBackgroundGray,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -620,7 +977,7 @@ class _AraclarPageState extends State<AraclarPage> {
                       ),
                       Icon(
                         CupertinoIcons.car,
-                        color: CupertinoColors.secondaryLabel,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(context),
                       ),
                     ],
                   ),
@@ -648,6 +1005,7 @@ class _AraclarPageState extends State<AraclarPage> {
             else
               AnimationLimiter(
                 child: ListView.builder(
+                  clipBehavior: Clip.antiAlias,
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),

@@ -5,6 +5,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/rapor_karti.dart';
+import 'package:flutter/services.dart';
 
 class TablolarPage extends StatefulWidget {
   @override
@@ -182,6 +183,7 @@ class _TablolarPageState extends State<TablolarPage> {
                     return GestureDetector(
                       onTap: () {
                         if (_isSelectionMode) {
+                          HapticFeedback.lightImpact();
                           _toggleSelection(file);
                         } else {
                           _openFile(file.path);

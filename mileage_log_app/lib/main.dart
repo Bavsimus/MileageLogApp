@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'screens/navigation_root.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:google_fonts/google_fonts.dart'; // Proje adına göre yolu düzenle
 
 Future<void> main() async {
   // Flutter binding'lerinin ve eklenti kanallarının hazır olduğundan emin olmamızı sağlar.
@@ -26,7 +26,7 @@ class MileageLogApp extends StatelessWidget {
       title: 'Mileage Log App',
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
-        primaryColor: CupertinoColors.systemTeal,
+        primaryColor: CupertinoColors.systemYellow,
         scaffoldBackgroundColor: CupertinoColors.systemGroupedBackground,
 
         // textTheme özelliğini ayarlayarak tüm uygulama fontunu değiştiriyoruz.

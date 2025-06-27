@@ -11,7 +11,7 @@ class NavigationRoot extends StatefulWidget {
 }
 
 class _NavigationRootState extends State<NavigationRoot> {
-  int _currentIndex = 0;
+  int _currentIndex = 1;
   late PageController _pageController;
 
   @override
@@ -37,7 +37,7 @@ class _NavigationRootState extends State<NavigationRoot> {
     // Sekme verilerini (ikon ve başlık) bir liste olarak tanımlayalım.
     final List<Map<String, dynamic>> tabItems = [
       {'icon': CupertinoIcons.car_detailed, 'label': 'Araçlar'},
-      {'icon': CupertinoIcons.add_circled, 'label': 'Tablo Oluştur'},
+      {'icon': CupertinoIcons.table_fill, 'label': 'Tablo Oluştur'},
       {'icon': CupertinoIcons.folder_fill, 'label': 'Tablolar'},
     ];
 
