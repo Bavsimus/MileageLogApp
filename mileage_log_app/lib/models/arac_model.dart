@@ -1,26 +1,28 @@
+// lib/models/arac_model.dart
+
 import '../models/database_helper.dart';
 
 class AracModel {
   final int? id;
   final String plaka;
   final int guzergahId;
-  final double gunBasiKm;
+  final int gunBasiKm; // <-- DEĞİŞTİ: double -> int
   final String kmAralik;
   final String haftasonuDurumu;
   final String marka;
-  final DateTime? muayeneTarihi; // YENİ EKLENDİ
-  final DateTime? kaskoTarihi;   // YENİ EKLENDİ
+  final DateTime? muayeneTarihi;
+  final DateTime? kaskoTarihi;
 
   AracModel({
     this.id,
     required this.plaka,
     required this.guzergahId,
-    required this.gunBasiKm,
+    required this.gunBasiKm, // <-- DEĞİŞTİ
     required this.kmAralik,
     required this.haftasonuDurumu,
     required this.marka,
-    this.muayeneTarihi, // YENİ EKLENDİ
-    this.kaskoTarihi,   // YENİ EKLENDİ
+    this.muayeneTarihi,
+    this.kaskoTarihi,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,9 +32,8 @@ class AracModel {
       DatabaseHelper.columnMarka: marka,
       DatabaseHelper.columnAracGuzergahId: guzergahId,
       DatabaseHelper.columnKmAralik: kmAralik,
-      DatabaseHelper.columnGunBasiKm: gunBasiKm,
+      DatabaseHelper.columnGunBasiKm: gunBasiKm, // <-- Değişiklik yok, int olarak kaydedilecek
       DatabaseHelper.columnHaftasonuDurumu: haftasonuDurumu,
-      // Tarihleri veritabanına metin olarak kaydetmek için ISO formatına çeviriyoruz.
       DatabaseHelper.columnMuayeneTarihi: muayeneTarihi?.toIso8601String(),
       DatabaseHelper.columnKaskoTarihi: kaskoTarihi?.toIso8601String(),
     };
@@ -44,10 +45,11 @@ class AracModel {
       plaka: map[DatabaseHelper.columnPlaka] ?? '',
       marka: map[DatabaseHelper.columnMarka] ?? 'Belirtilmemiş',
       guzergahId: map[DatabaseHelper.columnAracGuzergahId] ?? 0,
-      gunBasiKm: (map[DatabaseHelper.columnGunBasiKm] as num?)?.toDouble() ?? 0.0,
+      // --- DEĞİŞİKLİK BURADA ---
+      // Veritabanından gelen sayısal değeri int'e çeviriyoruz.
+      gunBasiKm: (map[DatabaseHelper.columnGunBasiKm] as num?)?.toInt() ?? 0,
       kmAralik: map[DatabaseHelper.columnKmAralik] ?? '',
       haftasonuDurumu: map[DatabaseHelper.columnHaftasonuDurumu] ?? '',
-      // Veritabanından gelen metni tekrar DateTime nesnesine çeviriyoruz.
       muayeneTarihi: map[DatabaseHelper.columnMuayeneTarihi] != null
           ? DateTime.tryParse(map[DatabaseHelper.columnMuayeneTarihi])
           : null,

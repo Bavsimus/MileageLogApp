@@ -226,83 +226,90 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
   }
 
   void _raporOlusturVeGoruntule(DateTime secilenAy) {
-    // ... Bu metotta değişiklik yok ...
-    final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
-    if (seciliAraclar.isEmpty) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('Araç Seçilmedi'),
-          content: const Text('Lütfen rapor oluşturmak için en az bir araç seçin.'),
-          actions: [
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              child: const Text('Tamam'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
-    for (final arac in seciliAraclar) {
-      final List<List<dynamic>> aracSatirlari = [];
-      final kmAralikParts = arac.kmAralik.split('-');
-      int kmMin = 0;
-      int kmMax = 0;
-      if (kmAralikParts.isNotEmpty) {
-        kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
-      }
-      if (kmAralikParts.length > 1) {
-        kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
-      } else {
-        kmMax = kmMin;
-      }
+  final seciliAraclar = seciliIndexler.map((i) => tumAraclar[i]).toList();
+  if (seciliAraclar.isEmpty) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Araç Seçilmedi'),
+        content:
+            const Text('Lütfen rapor oluşturmak için en az bir araç seçin.'),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: const Text('Tamam'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+    return;
+  }
+  final Map<AracModel, List<List<dynamic>>> raporVerisi = {};
+  for (final arac in seciliAraclar) {
+    final List<List<dynamic>> aracSatirlari = [];
+
+    final kmAralikParts = arac.kmAralik.split('-');
+    int kmMin = 0;
+    int kmMax = 0;
+
+    if (kmAralikParts.length == 1) {
+      final ortalamaKm = int.tryParse(kmAralikParts[0].trim()) ?? 0;
+      kmMin = max(0, ortalamaKm - 5);
+      kmMax = ortalamaKm + 5;
+    } else if (kmAralikParts.length > 1) {
+      kmMin = int.tryParse(kmAralikParts[0].trim()) ?? 0;
+      kmMax = int.tryParse(kmAralikParts[1].trim()) ?? 0;
+
       if (kmMin > kmMax) {
         final temp = kmMin;
         kmMin = kmMax;
         kmMax = temp;
       }
-      double baslangicKm = arac.gunBasiKm;
-      final gunSayisi = DateTime(secilenAy.year, secilenAy.month + 1, 0).day;
-      for (int day = 1; day <= gunSayisi; day++) {
-        final tarih = DateTime(secilenAy.year, secilenAy.month, day);
-        if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
-          aracSatirlari.add([
-            '${tarih.day}.${tarih.month}.${tarih.year}',
-            '-',
-            '-',
-            0,
-            'Hafta Sonu Tatil',
-          ]);
-          continue;
-        }
-        final guzergahAdi = tumGuzergahlar
-            .firstWhere((g) => g.id == arac.guzergahId, orElse: () => GuzergahModel(id: 0, name: 'Bilinmiyor'))
-            .name;
-        final yapilanKm = (kmMax - kmMin == 0)
-            ? kmMin
-            : Random().nextInt(kmMax - kmMin + 1) + kmMin;
-        final gunSonuKm = baslangicKm + yapilanKm;
+    }
+
+    int baslangicKm = arac.gunBasiKm;
+    final gunSayisi = DateTime(secilenAy.year, secilenAy.month + 1, 0).day;
+    for (int day = 1; day <= gunSayisi; day++) {
+      final tarih = DateTime(secilenAy.year, secilenAy.month, day);
+      if (tarih.weekday >= 6 && arac.haftasonuDurumu == 'Çalışmıyor') {
         aracSatirlari.add([
           '${tarih.day}.${tarih.month}.${tarih.year}',
-          baslangicKm.toStringAsFixed(2),
-          gunSonuKm.toStringAsFixed(2),
-          yapilanKm,
-          guzergahAdi,
+          '-',
+          '-',
+          0,
+          'Hafta Sonu Tatil',
         ]);
-        baslangicKm = gunSonuKm;
+        continue;
       }
-      raporVerisi[arac] = aracSatirlari;
+      final guzergahAdi = tumGuzergahlar
+          .firstWhere((g) => g.id == arac.guzergahId,
+              orElse: () => GuzergahModel(id: 0, name: 'Bilinmiyor'))
+          .name;
+
+      final yapilanKm = (kmMax - kmMin <= 0)
+          ? kmMin
+          : Random().nextInt(kmMax - kmMin + 1) + kmMin;
+
+      final gunSonuKm = baslangicKm + yapilanKm;
+      aracSatirlari.add([
+        '${tarih.day}.${tarih.month}.${tarih.year}',
+        baslangicKm.toString(),
+        gunSonuKm.toString(),
+        yapilanKm,
+        guzergahAdi,
+      ]);
+      baslangicKm = gunSonuKm;
     }
-    Navigator.push(
-      context,
-      CupertinoPageRoute(
-        builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
-      ),
-    );
+    raporVerisi[arac] = aracSatirlari;
   }
+  Navigator.push(
+    context,
+    CupertinoPageRoute(
+      builder: (context) => RaporOnizlemePage(raporVerisi: raporVerisi),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
