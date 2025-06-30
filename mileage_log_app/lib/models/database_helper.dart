@@ -52,36 +52,48 @@ class DatabaseHelper {
 
   // --- TABLO OLUŞTURMA (DÜZELTİLMİŞ) ---
   Future _onCreate(Database db, int version) async {
-    // Önce Güzergahlar tablosu
-    await db.execute('''
-      CREATE TABLE $tableGuzergahlar (
-        $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
-        $columnGuzergahName TEXT NOT NULL UNIQUE
-      )
-    ''');
-    // lib/helpers/database_helper.dart
-    // Sonra Araçlar tablosu
-    await db.execute('''
-      CREATE TABLE $tableAraclar (
-        $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
-        $columnPlaka TEXT NOT NULL,
-        $columnMarka TEXT NOT NULL,
-        $columnAracGuzergahId INTEGER NOT NULL,
-        $columnKmAralik TEXT NOT NULL,
-        $columnGunBasiKm REAL NOT NULL,
-        $columnHaftasonuDurumu TEXT NOT NULL,
-        FOREIGN KEY ($columnAracGuzergahId) REFERENCES $tableGuzergahlar ($columnId) 
-      )
-    ''');
-  }
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-  // Eğer eski versiyon 1 ise (yani yeni sütunlarımız eksikse)
+  // Önce Güzergahlar tablosu
+  await db.execute('''
+    CREATE TABLE $tableGuzergahlar (
+      $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
+      $columnGuzergahName TEXT NOT NULL UNIQUE
+    )
+  ''');
+
+  // Sonra Araçlar tablosu (TÜM SÜTUNLARI İÇEREN GÜNCEL HALİ)
+  await db.execute('''
+    CREATE TABLE $tableAraclar (
+      $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
+      $columnPlaka TEXT NOT NULL,
+      $columnMarka TEXT NOT NULL,
+      $columnAracGuzergahId INTEGER NOT NULL,
+      $columnKmAralik TEXT NOT NULL,
+      $columnGunBasiKm REAL NOT NULL,
+      $columnHaftasonuDurumu TEXT NOT NULL,
+      $columnMuayeneTarihi TEXT, -- YENİ SÜTUN BURADA DA OLMALI
+      $columnKaskoTarihi TEXT,   -- YENİ SÜTUN BURADA DA OLMALI
+      FOREIGN KEY ($columnAracGuzergahId) REFERENCES $tableGuzergahlar ($columnId) 
+    )
+  ''');
+}
+
+  // lib/helpers/database_helper.dart
+
+Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
   if (oldVersion < 2) {
-    // ALTER TABLE komutu ile mevcut tabloya yeni sütunlar ekliyoruz.
-    await db.execute('ALTER TABLE $tableAraclar ADD COLUMN $columnMuayeneTarihi TEXT');
-    await db.execute('ALTER TABLE $tableAraclar ADD COLUMN $columnKaskoTarihi TEXT');
+    // Sütunların var olup olmadığını kontrol etmek için tablonun bilgisini al
+    var tableInfo = await db.rawQuery('PRAGMA table_info($tableAraclar)');
+    List<String> existingColumns = tableInfo.map((row) => row['name'] as String).toList();
+
+    // Sadece eksikse ekle
+    if (!existingColumns.contains(columnMuayeneTarihi)) {
+      await db.execute('ALTER TABLE $tableAraclar ADD COLUMN $columnMuayeneTarihi TEXT');
+    }
+    if (!existingColumns.contains(columnKaskoTarihi)) {
+      await db.execute('ALTER TABLE $tableAraclar ADD COLUMN $columnKaskoTarihi TEXT');
+    }
   }
-  } 
+}
 
 
   // --- ARAÇ CRUD METOTLARI ---
