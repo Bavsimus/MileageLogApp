@@ -23,7 +23,7 @@ class MileageLogApp extends StatelessWidget {
     final baseTextStyle = CupertinoTheme.of(context).textTheme.textStyle;
 
     return CupertinoApp(
-      title: 'Mileage Log App',
+      title: 'KM Defteri',
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
         primaryColor: CupertinoColors.systemYellow,

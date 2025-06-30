@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../models/arac_model.dart';
+import 'package:intl/intl.dart';
 
 class AracKarti extends StatelessWidget {
   final AracModel arac;
@@ -21,6 +22,7 @@ class AracKarti extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String text,
+    Color? textColor,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -62,6 +64,20 @@ class AracKarti extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final formatter = DateFormat('dd.MM.yyyy');
+    Color _getDateColor(DateTime? date) {
+    if (date == null) {
+      return CupertinoColors.secondaryLabel.resolveFrom(context);
+    }
+    final difference = date.difference(DateTime.now()).inDays;
+    if (difference < 0) {
+      return CupertinoColors.systemRed; // Geçmiş
+    }
+    if (difference <= 30) {
+      return CupertinoColors.systemOrange; // 30 gün veya daha az kalmış
+    }
+    return CupertinoColors.secondaryLabel.resolveFrom(context); // Normal
+    }
     return Container(
       margin: const EdgeInsets.only(top: 30.0, bottom: 8.0),
       child: Stack(
@@ -79,7 +95,7 @@ class AracKarti extends StatelessWidget {
               borderRadius: BorderRadius.circular(24.0),
             ),
             child: Container(
-              height: 220,
+              height: 240,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
                 children: [
@@ -110,8 +126,15 @@ class AracKarti extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: guzergahAdi),
-                                  const SizedBox(height: 12),
                                   _buildInfoRow(context, icon: CupertinoIcons.tag, text: arac.marka),
+                                  _buildInfoRow(
+                                  context,
+                                  icon: CupertinoIcons.calendar,
+                                  text: arac.muayeneTarihi != null 
+                                      ? formatter.format(arac.muayeneTarihi!) 
+                                      : "Belirtilmemiş",
+                                  textColor: _getDateColor(arac.muayeneTarihi),
+                                ),
                                 ],
                               ),
                             ),
@@ -122,8 +145,15 @@ class AracKarti extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildInfoRow(context, icon: CupertinoIcons.arrow_right_arrow_left_square, text: arac.kmAralik),
-                                  const SizedBox(height: 12),
                                   _buildInfoRow(context, icon: CupertinoIcons.gauge, text: arac.gunBasiKm.toString()),
+                                  _buildInfoRow(
+                                  context,
+                                  icon: CupertinoIcons.shield_lefthalf_fill,
+                                  text: arac.kaskoTarihi != null 
+                                      ? formatter.format(arac.kaskoTarihi!) 
+                                      : "Belirtilmemiş",
+                                  textColor: _getDateColor(arac.kaskoTarihi),
+                                ),
                                 ],
                               ),
                             ),

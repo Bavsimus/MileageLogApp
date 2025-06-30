@@ -1,17 +1,189 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/arac_model.dart';
 import '../widgets/arac_karti.dart';
-import '../widgets/custom_cupertino_list_tile.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter/services.dart';
 import '../models/database_helper.dart';
 import 'package:mileage_log_app/models/guzergah_model.dart';
+import 'package:intl/intl.dart';
+import '../widgets/custom_cupertino_list_tile.dart';
 
 // --- YENİ WIDGET: Güzergah Yönetim Diyaloğu ---
 // araclar_page.dart dosyasının en üstlerine, _AraclarPageState'ten önceye
+// araclar_page.dart dosyasının en üstlerine
+  // araclar_page.dart dosyasının en üstlerine
 
+class GunSecici extends StatelessWidget {
+  final int yil;
+  final int ay;
+  final int seciliGun;
+  final ValueChanged<int> onGunSecildi;
+
+  const GunSecici({
+    super.key,
+    required this.yil,
+    required this.ay,
+    required this.seciliGun,
+    required this.onGunSecildi,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Seçilen ay ve yıla göre o ayın kaç gün çektiğini hesapla
+    final int gunSayisi = DateTime(yil, ay + 1, 0).day;
+
+    // Seçili güne otomatik olarak kaydır
+    final ScrollController controller = ScrollController(
+      initialScrollOffset: (seciliGun - 1) * 60.0, // Buton genişliğine göre ayarlandı
+    );
+
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        controller: controller,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        itemCount: gunSayisi,
+        itemBuilder: (context, index) {
+          final gun = index + 1;
+          final isSelected = gun == seciliGun;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: CupertinoButton(
+              color: isSelected
+                  ? CupertinoTheme.of(context).primaryColor
+                  : CupertinoTheme.of(context).barBackgroundColor,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              borderRadius: BorderRadius.circular(20),
+              onPressed: () => onGunSecildi(gun),
+              child: Text(
+                gun.toString(),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isSelected
+                      ? Colors.white
+                      : CupertinoTheme.of(context).textTheme.textStyle.color,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+  class AySecici extends StatelessWidget {
+  final List<String> aylar;
+  final int seciliAy;
+  final ValueChanged<int> onAySecildi;
+
+  const AySecici({
+    super.key,
+    required this.aylar,
+    required this.seciliAy,
+    required this.onAySecildi,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ScrollController controller = ScrollController(
+      initialScrollOffset: (seciliAy - 1) * 85.0, // Kart genişliğine göre ayarlandı
+    );
+
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        controller: controller,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        itemCount: aylar.length,
+        itemBuilder: (context, index) {
+          final ay = aylar[index];
+          final ayNo = index + 1;
+          final isSelected = ayNo == seciliAy;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: CupertinoButton(
+              color: isSelected
+                  ? CupertinoTheme.of(context).primaryColor
+                  : CupertinoTheme.of(context).barBackgroundColor,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              borderRadius: BorderRadius.circular(20),
+              onPressed: () => onAySecildi(ayNo),
+              child: Text(
+                ay,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : CupertinoTheme.of(context).textTheme.textStyle.color,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// --- YIL SEÇİCİ WIDGET'I ---
+class YilSecici extends StatelessWidget {
+  final int seciliYil;
+  final ValueChanged<int> onYilSecildi;
+  final int baslangicYili;
+  final int yilSayisi;
+
+  const YilSecici({
+    super.key,
+    required this.seciliYil,
+    required this.onYilSecildi,
+    this.baslangicYili = 2020,
+    this.yilSayisi = 50,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ScrollController controller = ScrollController(
+      initialScrollOffset: (seciliYil - baslangicYili) * 110.0,
+    );
+
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        controller: controller,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        itemCount: yilSayisi,
+        itemBuilder: (context, index) {
+          final yil = baslangicYili + index;
+          final isSelected = yil == seciliYil;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5.0),
+            child: CupertinoButton(
+              color: isSelected
+                  ? CupertinoTheme.of(context).primaryColor
+                  : CupertinoTheme.of(context).barBackgroundColor,
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              borderRadius: BorderRadius.circular(20),
+              onPressed: () => onYilSecildi(yil),
+              child: Text(
+                yil.toString(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? Colors.white
+                      : CupertinoTheme.of(context).textTheme.textStyle.color,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 class GuzergahYonetimDialog extends StatefulWidget {
   // Diyalog kapandığında ana sayfanın listeyi yenilemesi için bir callback
   final VoidCallback onGuzergahlarChanged;
@@ -456,6 +628,8 @@ class _AraclarPageState extends State<AraclarPage> {
   int? seciliGuzergahId; // Artık seçili güzergahın ID'sini tutuyoruz
   List<AracModel> araclar = [];
   int? _duzenlenenIndex;
+  DateTime? seciliMuayeneTarihi;
+  DateTime? seciliKaskoTarihi;
 
   final TextEditingController plakaController = TextEditingController();
   final TextEditingController kmBaslangicController = TextEditingController();
@@ -552,6 +726,8 @@ Future<void> _saveOrUpdateArac() async {
       kmAralik: kmAralikController.text.trim(),
       haftasonuDurumu: haftasonuDurumu,
       marka: seciliMarka,
+      muayeneTarihi: seciliMuayeneTarihi,
+      kaskoTarihi: seciliKaskoTarihi,
     );
     await dbHelper.update(guncellenmisArac);
   } else {
@@ -563,6 +739,8 @@ Future<void> _saveOrUpdateArac() async {
       kmAralik: kmAralikController.text.trim(),
       haftasonuDurumu: haftasonuDurumu,
       marka: seciliMarka,
+      muayeneTarihi: seciliMuayeneTarihi,
+      kaskoTarihi: seciliKaskoTarihi,
     );
     await dbHelper.insert(yeniArac);
   }
@@ -576,6 +754,8 @@ Future<void> _saveOrUpdateArac() async {
     if (guzergahlar.isNotEmpty) seciliGuzergahId = guzergahlar.first.id;
     if (_markalar.isNotEmpty) seciliMarka = _markalar.first;
     haftasonuDurumu = 'Çalışıyor';
+    seciliMuayeneTarihi = null;
+    seciliKaskoTarihi = null;
   });
 
   // Listeyi veritabanından yeniden yükle
@@ -620,6 +800,9 @@ void _editArac(int index) {
     // ESKİ: seciliGuzergah = arac.guzergah;
     // YENİ:
     seciliGuzergahId = arac.guzergahId;
+    seciliMuayeneTarihi = arac.muayeneTarihi;
+    seciliKaskoTarihi = arac.kaskoTarihi;
+
 
     // Aracın eski güzergahının ID'si mevcut güzergahlar listesinde var mı diye kontrol et.
     // Eğer silinmişse, kullanıcıyı uyar ve ilk sıradakini seç.
@@ -663,6 +846,8 @@ void _editArac(int index) {
         seciliMarka = _markalar.first;
       }
       haftasonuDurumu = 'Çalışıyor';
+      seciliMuayeneTarihi = null;
+      seciliKaskoTarihi = null;
     });
   }
 
@@ -730,7 +915,88 @@ void _editArac(int index) {
 
   // --- METOT GÜNCELLENDİ: Yeni ve güçlü diyaloğu gösterir ---
   // araclar_page.dart -> _AraclarPageState sınıfının içi
+// araclar_page.dart -> _AraclarPageState sınıfının içine
 
+  // araclar_page.dart -> _AraclarPageState sınıfının içine
+
+Future<void> _showCustomDatePicker({
+  required BuildContext context,
+  required String title,
+  required DateTime? initialDate,
+  required Function(DateTime) onDateSelected,
+}) async {
+  DateTime tempDate = initialDate ?? DateTime.now();
+
+  await showCupertinoModalPopup<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final List<String> aylar = List.generate(12, (index) {
+            return DateFormat.MMMM('tr_TR').format(DateTime(tempDate.year, index + 1));
+          });
+
+          // Ay veya yıl değiştiğinde günün geçerli kalmasını sağlayan yardımcı fonksiyon
+          void updateDayIfNeeded(int yil, int ay, int gun) {
+            final ayinSonGunu = DateTime(yil, ay + 1, 0).day;
+            final yeniGun = gun > ayinSonGunu ? ayinSonGunu : gun;
+            tempDate = DateTime(yil, ay, yeniGun);
+          }
+
+          return CupertinoActionSheet(
+            title: Text(title),
+            message: Column(
+              children: [
+                const SizedBox(height: 20),
+                YilSecici(
+                  seciliYil: tempDate.year,
+                  onYilSecildi: (yeniYil) {
+                    setDialogState(() {
+                      updateDayIfNeeded(yeniYil, tempDate.month, tempDate.day);
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+                AySecici(
+                  aylar: aylar,
+                  seciliAy: tempDate.month,
+                  onAySecildi: (yeniAy) {
+                    setDialogState(() {
+                      updateDayIfNeeded(tempDate.year, yeniAy, tempDate.day);
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // --- DEĞİŞİKLİK BURADA ---
+                // Eski CupertinoDatePicker kaldırıldı, yerine yeni GunSecici geldi.
+                GunSecici(
+                  yil: tempDate.year,
+                  ay: tempDate.month,
+                  seciliGun: tempDate.day,
+                  onGunSecildi: (yeniGun) {
+                    setDialogState(() {
+                      tempDate = DateTime(tempDate.year, tempDate.month, yeniGun);
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+            cancelButton: CupertinoActionSheetAction(
+              isDefaultAction: true,
+              onPressed: () {
+                onDateSelected(tempDate);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Bitti'),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 Future<void> _guzergahYonetimDialogGoster() async {
   await showCupertinoDialog(
     context: context,
@@ -868,9 +1134,48 @@ Future<void> _guzergahYonetimDialogGoster() async {
                               borderRadius: BorderRadius.circular(16.0),
                             ),
                             ),
-                        
-                        // --- YENİ KOD ---
-// ...
+                        const SizedBox(height: 10), // Boşluk ekle
+
+// YENİ: Muayene Tarihi Alanı
+                        CustomCupertinoListTile(
+                          title: 'Muayene Tarihi',
+                          value: seciliMuayeneTarihi != null 
+                              ? DateFormat('dd.MM.yyyy').format(seciliMuayeneTarihi!) 
+                              : 'Seçilmedi',
+                          icon: CupertinoIcons.calendar,
+                          onTap: () {
+                            _showCustomDatePicker(
+                              context: context,
+                              title: 'Muayene Tarihini Seçin',
+                              initialDate: seciliMuayeneTarihi,
+                              onDateSelected: (yeniTarih) {
+                                setState(() {
+                                  seciliMuayeneTarihi = yeniTarih;
+                                });
+                              },
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, indent: 50),
+                        CustomCupertinoListTile(
+                          title: 'Kasko Bitiş Tarihi',
+                          value: seciliKaskoTarihi != null 
+                              ? DateFormat('dd.MM.yyyy').format(seciliKaskoTarihi!) 
+                              : 'Seçilmedi',
+                          icon: CupertinoIcons.shield_lefthalf_fill,
+                          onTap: () {
+                            _showCustomDatePicker(
+                              context: context,
+                              title: 'Kasko Bitiş Tarihini Seçin',
+                              initialDate: seciliKaskoTarihi,
+                              onDateSelected: (yeniTarih) {
+                                setState(() {
+                                  seciliKaskoTarihi = yeniTarih;
+                                });
+                              },
+                            );
+                          },
+                        ),
                         SizedBox(height: 12),
                         // Başlık
                         Padding(

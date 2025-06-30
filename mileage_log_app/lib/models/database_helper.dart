@@ -7,7 +7,7 @@ import '../models/guzergah_model.dart';
 
 class DatabaseHelper {
   static const _databaseName = "AracTakip.db";
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   // --- Tablo İsimleri ---
   static const tableAraclar = 'araclar';
@@ -23,6 +23,8 @@ class DatabaseHelper {
   static const columnGunBasiKm = 'gunBasiKm';
   static const columnHaftasonuDurumu = 'haftasonuDurumu';
   static const columnAracGuzergahId = 'guzergah_id'; // İsim çakışmasını önlemek için değiştirildi
+  static const columnMuayeneTarihi = 'muayene_tarihi';
+  static const columnKaskoTarihi = 'kasko_tarihi';
 
   // --- Guzergahlar Tablosu Sütunları ---
   static const columnGuzergahName = 'name';
@@ -39,11 +41,14 @@ class DatabaseHelper {
   }
 
   _initDatabase() async {
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = join(documentsDirectory.path, _databaseName);
-    return await openDatabase(path,
-        version: _databaseVersion, onCreate: _onCreate);
-  }
+  Directory documentsDirectory = await getApplicationDocumentsDirectory();
+  String path = join(documentsDirectory.path, _databaseName);
+  return await openDatabase(path,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade, // <-- YENİ EKLENDİ
+  );
+}
 
   // --- TABLO OLUŞTURMA (DÜZELTİLMİŞ) ---
   Future _onCreate(Database db, int version) async {
@@ -54,7 +59,7 @@ class DatabaseHelper {
         $columnGuzergahName TEXT NOT NULL UNIQUE
       )
     ''');
-
+    // lib/helpers/database_helper.dart
     // Sonra Araçlar tablosu
     await db.execute('''
       CREATE TABLE $tableAraclar (
@@ -69,6 +74,15 @@ class DatabaseHelper {
       )
     ''');
   }
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  // Eğer eski versiyon 1 ise (yani yeni sütunlarımız eksikse)
+  if (oldVersion < 2) {
+    // ALTER TABLE komutu ile mevcut tabloya yeni sütunlar ekliyoruz.
+    await db.execute('ALTER TABLE $tableAraclar ADD COLUMN $columnMuayeneTarihi TEXT');
+    await db.execute('ALTER TABLE $tableAraclar ADD COLUMN $columnKaskoTarihi TEXT');
+  }
+  } 
+
 
   // --- ARAÇ CRUD METOTLARI ---
   Future<int> insert(AracModel arac) async {
