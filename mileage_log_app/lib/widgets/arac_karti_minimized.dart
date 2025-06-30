@@ -7,11 +7,13 @@ import '../models/arac_model.dart';
 // 1. SINIF ADI DÜZELTİLDİ
 class AracKartiMinimized extends StatelessWidget {
   final AracModel arac;
+  final String guzergahAdi;
 
   // 2. GEREKSİZ PARAMETRELER KALDIRILDI
   const AracKartiMinimized({
     super.key,
     required this.arac,
+    required this.guzergahAdi,
   });
 
   // Bilgi satırları için yardımcı widget (TASARIMINIZA DOKUNULMADI)
@@ -25,7 +27,7 @@ class AracKartiMinimized extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: CupertinoColors.secondaryLabel.resolveFrom(context)),
         const SizedBox(width: 8),
-        Expanded(
+        Flexible(
           child: Text(
             text,
             style: CupertinoTheme.of(
@@ -104,7 +106,7 @@ class AracKartiMinimized extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: arac.guzergah),
+                                  _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: guzergahAdi),
                                   const SizedBox(height: 12),
                                   _buildInfoRow(context, icon: CupertinoIcons.tag, text: arac.marka),
                                 ],

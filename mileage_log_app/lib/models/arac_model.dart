@@ -1,42 +1,41 @@
-import 'dart:convert';
+import '../models/database_helper.dart';
 
 class AracModel {
+  final int? id;
   final String plaka;
-  final String guzergah;
+  final int guzergahId;
   final double gunBasiKm;
   final String kmAralik;
   final String haftasonuDurumu;
-  final String marka; // YENİ EKLENEN ALAN
+  final String marka;
 
   AracModel({
+    this.id,
     required this.plaka,
-    required this.guzergah,
+    required this.guzergahId,
     required this.gunBasiKm,
     required this.kmAralik,
     required this.haftasonuDurumu,
-    required this.marka, // YENİ EKLENDİ
+    required this.marka,
   });
 
   Map<String, dynamic> toMap() => {
-        'plaka': plaka,
-        'guzergah': guzergah,
-        'gunBasiKm': gunBasiKm,
-        'kmAralik': kmAralik,
-        'haftasonuDurumu': haftasonuDurumu,
-        'marka': marka, // YENİ EKLENDİ
+        DatabaseHelper.columnId: id,
+        DatabaseHelper.columnPlaka: plaka,
+        DatabaseHelper.columnMarka: marka,
+        DatabaseHelper.columnAracGuzergahId: guzergahId, // DÜZELTİLDİ
+        DatabaseHelper.columnKmAralik: kmAralik,
+        DatabaseHelper.columnGunBasiKm: gunBasiKm,
+        DatabaseHelper.columnHaftasonuDurumu: haftasonuDurumu,
       };
 
   factory AracModel.fromMap(Map<String, dynamic> map) => AracModel(
-        plaka: map['plaka'] ?? '',
-        guzergah: map['guzergah'] ?? '',
-        gunBasiKm: (map['gunBasiKm'] as num?)?.toDouble() ?? 0.0,
-        kmAralik: map['kmAralik'] ?? '',
-        haftasonuDurumu: map['haftasonuDurumu'] ?? '',
-        // YENİ EKLENDİ: Eski verilerde bu alan olmayabileceği için varsayılan değer atıyoruz.
-        marka: map['marka'] ?? 'Belirtilmemiş', 
+        id: map[DatabaseHelper.columnId],
+        plaka: map[DatabaseHelper.columnPlaka] ?? '',
+        marka: map[DatabaseHelper.columnMarka] ?? 'Belirtilmemiş',
+        guzergahId: map[DatabaseHelper.columnAracGuzergahId] ?? 0, // DÜZELTİLDİ
+        gunBasiKm: (map[DatabaseHelper.columnGunBasiKm] as num?)?.toDouble() ?? 0.0,
+        kmAralik: map[DatabaseHelper.columnKmAralik] ?? '',
+        haftasonuDurumu: map[DatabaseHelper.columnHaftasonuDurumu] ?? '',
       );
-
-  String toJson() => json.encode(toMap());
-  factory AracModel.fromJson(String source) =>
-      AracModel.fromMap(json.decode(source));
 }

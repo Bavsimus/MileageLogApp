@@ -2,12 +2,13 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/arac_model.dart';
 import 'rapor_onizleme_page.dart';
 import '../widgets/arac_karti_minimized.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter/services.dart';
+import '../models/database_helper.dart';
+import '../models/guzergah_model.dart';
 
 // --- AY SEÇİCİ WIDGET'I ---
 class AySecici extends StatelessWidget {
@@ -131,6 +132,7 @@ class TabloOlusturPage extends StatefulWidget {
 
 class _TabloOlusturPageState extends State<TabloOlusturPage> {
   List<AracModel> tumAraclar = [];
+  List<GuzergahModel> tumGuzergahlar = [];
   Set<int> seciliIndexler = {};
   DateTime _seciliTarih = DateTime.now();
   bool _isLoading = true;
@@ -138,11 +140,11 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
   @override
   void initState() {
     super.initState();
-    _loadAraclar();
+    _loadData();
   }
 
+  /*
   Future<void> _loadAraclar() async {
-    await Future.delayed(const Duration(milliseconds: 300));
     final prefs = await SharedPreferences.getInstance();
     final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
     if (mounted) {
@@ -152,6 +154,24 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
       });
     }
   }
+*/
+  Future<void> _loadData() async {
+  final dbHelper = DatabaseHelper.instance;
+  // Future'ları aynı anda çalıştırıp beklemek daha performanslıdır
+  final aracListesiFuture = dbHelper.getAllAraclar();
+  final guzergahListesiFuture = dbHelper.getAllGuzergahlar();
+  
+  final aracListesi = await aracListesiFuture;
+  final guzergahListesi = await guzergahListesiFuture;
+
+  if (mounted) {
+    setState(() {
+      tumAraclar = aracListesi;
+      tumGuzergahlar = guzergahListesi;
+      _isLoading = false;
+    });
+  }
+}
 
   // HATA 2: EKSİK OLAN METOT EKLENDİ
   void _ayYilSeciciGoster() {
@@ -258,6 +278,9 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
           ]);
           continue;
         }
+        final guzergahAdi = tumGuzergahlar
+            .firstWhere((g) => g.id == arac.guzergahId, orElse: () => GuzergahModel(id: 0, name: 'Bilinmiyor'))
+            .name;
         final yapilanKm = (kmMax - kmMin == 0)
             ? kmMin
             : Random().nextInt(kmMax - kmMin + 1) + kmMin;
@@ -267,7 +290,7 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
           baslangicKm.toStringAsFixed(2),
           gunSonuKm.toStringAsFixed(2),
           yapilanKm,
-          arac.guzergah,
+          guzergahAdi,
         ]);
         baslangicKm = gunSonuKm;
       }
@@ -340,6 +363,9 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
                 final aracIndex = index - 1;
                 final arac = tumAraclar[aracIndex];
                 final bool isSelected = seciliIndexler.contains(aracIndex);
+                final guzergahAdi = tumGuzergahlar
+                .firstWhere((g) => g.id == arac.guzergahId, orElse: () => GuzergahModel(id: 0, name: "Bilinmiyor"))
+                .name;
                 return AnimationConfiguration.staggeredList(
                   position: aracIndex,
                   duration: const Duration(milliseconds: 400),
@@ -359,41 +385,28 @@ class _TabloOlusturPageState extends State<TabloOlusturPage> {
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 0),
-                          child: Stack(
+                          child: // Stack içindeki kodu bununla değiştirebiliriz.
+                          Stack(
                             children: [
-                              AracKartiMinimized(arac: arac),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                transitionBuilder: (Widget child, Animation<double> animation) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: ScaleTransition(
-                                      scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-                                        CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-                                      ),
-                                      child: child,
+                              AracKartiMinimized(arac: arac, guzergahAdi: guzergahAdi,),
+                              // AnimatedSwitcher yerine basit bir if kontrolü
+                              if (isSelected)
+                                Positioned.fill(
+                                  key: const ValueKey('selected_overlay'),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 30.0, bottom: 8.0),
+                                    decoration: BoxDecoration(
+                                      color: CupertinoColors.systemYellow.withOpacity(0.4),
+                                      borderRadius: BorderRadius.circular(24.0),
+                                      border: Border.all(color: CupertinoColors.systemYellow, width: 2.5),
                                     ),
-                                  );
-                                },
-                                child: isSelected
-                                    ? Positioned.fill(
-                                        key: const ValueKey('selected_overlay'),
-                                        child: Container(
-                                          margin: const EdgeInsets.only(top: 30.0, bottom: 8.0),
-                                          decoration: BoxDecoration(
-                                            color: CupertinoColors.systemYellow.withOpacity(0.4),
-                                            borderRadius: BorderRadius.circular(24.0),
-                                            border: Border.all(color: CupertinoColors.systemYellow, width: 2.5),
-                                          ),
-                                          child: const Center(
-                                            child: Icon(CupertinoIcons.check_mark_circled, color: Colors.white, size: 50),
-                                          ),
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(key: ValueKey('empty_overlay')),
-                              ),
+                                    child: const Center(
+                                      child: Icon(CupertinoIcons.check_mark_circled, color: Colors.white, size: 50),
+                                    ),
+                                  ),
+                                )
                             ],
-                          ),
+                          )
                         ),
                       ),
                     ),

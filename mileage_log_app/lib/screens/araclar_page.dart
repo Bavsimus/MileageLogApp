@@ -6,16 +6,19 @@ import '../widgets/arac_karti.dart';
 import '../widgets/custom_cupertino_list_tile.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter/services.dart';
+import '../models/database_helper.dart';
+import 'package:mileage_log_app/models/guzergah_model.dart';
 
 // --- YENİ WIDGET: Güzergah Yönetim Diyaloğu ---
+// araclar_page.dart dosyasının en üstlerine, _AraclarPageState'ten önceye
+
 class GuzergahYonetimDialog extends StatefulWidget {
-  final List<String> initialGuzergahlar;
-  final List<AracModel> aracListesi;
+  // Diyalog kapandığında ana sayfanın listeyi yenilemesi için bir callback
+  final VoidCallback onGuzergahlarChanged;
 
   const GuzergahYonetimDialog({
     Key? key,
-    required this.initialGuzergahlar,
-    required this.aracListesi,
+    required this.onGuzergahlarChanged,
   }) : super(key: key);
 
   @override
@@ -23,118 +26,107 @@ class GuzergahYonetimDialog extends StatefulWidget {
 }
 
 class _GuzergahYonetimDialogState extends State<GuzergahYonetimDialog> {
-  late List<String> guzergahlar;
+  List<GuzergahModel> guzergahlar = [];
   final TextEditingController textController = TextEditingController();
-  String? _duzenlenenGuzergah;
-
+  final dbHelper = DatabaseHelper.instance;
+  
   @override
   void initState() {
     super.initState();
-    // Başlangıç değerini state'e kopyalıyoruz
-    guzergahlar = List.from(widget.initialGuzergahlar);
+    _refreshGuzergahList();
   }
-
-  Future<void> _saveGuzergahlar() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('guzergahlar', guzergahlar);
+  
+  Future<void> _refreshGuzergahList() async {
+    final guzergahListesi = await dbHelper.getAllGuzergahlar();
+    setState(() {
+      guzergahlar = guzergahListesi;
+    });
   }
+  
+  // araclar_page.dart -> _GuzergahYonetimDialogState sınıfının içi
 
-  void _kaydetVeyaGuncelle() {
+  void _kaydet() async {
     final yeniGuzergahAdi = textController.text.trim();
     if (yeniGuzergahAdi.isEmpty) return;
 
-    if (_duzenlenenGuzergah != null) {
-      // Güncelleme modu
-      if (guzergahlar.contains(yeniGuzergahAdi) && yeniGuzergahAdi != _duzenlenenGuzergah) return; // Zaten var
-
-      final index = guzergahlar.indexOf(_duzenlenenGuzergah!);
-      if (index != -1) {
-        setState(() {
-          guzergahlar[index] = yeniGuzergahAdi;
-        });
-      }
-    } else {
-      // Ekleme modu
-      if (guzergahlar.contains(yeniGuzergahAdi)) return; // Zaten var
-      setState(() {
-        guzergahlar.add(yeniGuzergahAdi);
-      });
-    }
-
-    _saveGuzergahlar();
-    textController.clear();
-    setState(() {
-      _duzenlenenGuzergah = null;
-    });
-  }
-
-  void _sil(String guzergahToDelete) {
-    final bool isRouteInUse = widget.aracListesi.any((arac) => arac.guzergah == guzergahToDelete);
-
-    if (isRouteInUse) {
+    // Aynı isimde güzergah var mı kontrol et
+    if (guzergahlar.any((g) => g.name.toLowerCase() == yeniGuzergahAdi.toLowerCase())) {
+      // EĞER VARSA, KULLANICIYI UYAR
       showCupertinoDialog(
         context: context,
         builder: (context) => CupertinoAlertDialog(
-          title: Text('Silinemez'),
-          content: Text('Bu güzergah bir araç tarafından kullanıldığı için silinemez.'),
-          actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Anladım'), onPressed: () => Navigator.of(context).pop())],
+          title: Text('Güzergah Mevcut'),
+          content: Text('"${yeniGuzergahAdi}" adında bir güzergah zaten var.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: Text('Tamam'),
+              onPressed: () => Navigator.of(context).pop(),
+            )
+          ],
         ),
       );
-    } else {
-      setState(() {
-        guzergahlar.remove(guzergahToDelete);
-      });
-      _saveGuzergahlar();
+      return; // Fonksiyondan çık
     }
+
+    // Eğer yoksa, ekleme işlemine devam et
+    await dbHelper.insertGuzergah(yeniGuzergahAdi);
+    textController.clear();
+    await _refreshGuzergahList();
+    widget.onGuzergahlarChanged(); // Ana sayfayı bilgilendir
+  }
+
+  void _sil(int id) async {
+    // Bu güzergahın herhangi bir araç tarafından kullanılıp kullanılmadığını kontrol etmeliyiz.
+    // Şimdilik bu kontrolü basitleştirip direkt silelim. İleri seviyede bu kontrol eklenebilir.
+    await dbHelper.deleteGuzergah(id);
+    await _refreshGuzergahList();
+    widget.onGuzergahlarChanged(); // Ana sayfayı bilgilendir
   }
   
   @override
   Widget build(BuildContext context) {
-    // Diyalog içeriğini oluşturan widget
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.2,
+      height: MediaQuery.of(context).size.height * 0.4, // Yüksekliği biraz artırdık
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            padding: const EdgeInsets.all(16.0),
             child: CupertinoTextField(
               controller: textController,
-              placeholder: _duzenlenenGuzergah == null ? 'Yeni Güzergah Ekle' : 'Güzergahı Düzenle',
+              placeholder: 'Yeni Güzergah Ekle',
               suffix: CupertinoButton(
                 padding: EdgeInsets.zero,
-                child: Icon(_duzenlenenGuzergah == null ? CupertinoIcons.add_circled : CupertinoIcons.check_mark),
-                onPressed: _kaydetVeyaGuncelle,
+                child: Icon(CupertinoIcons.add_circled),
+                onPressed: _kaydet,
               ),
             ),
           ),
           Divider(height: 1),
           Expanded(
-            child: ListView.separated(
-              itemCount: guzergahlar.length,
-              separatorBuilder: (context, index) => Divider(height: 1),
-              itemBuilder: (context, index) {
-                final guzergah = guzergahlar[index];
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(guzergah),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            child: Icon(CupertinoIcons.trash, size: 20, color: CupertinoColors.systemRed),
-                            onPressed: () => _sil(guzergah),
-                          ),
-                        ],
-                      ),
-                    ],
+            child: guzergahlar.isEmpty
+                ? Center(child: Text("Henüz güzergah eklenmedi."))
+                : ListView.separated(
+                    itemCount: guzergahlar.length,
+                    separatorBuilder: (context, index) => Divider(height: 1, indent: 16, endIndent: 16),
+                    itemBuilder: (context, index) {
+                      final guzergah = guzergahlar[index];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(guzergah.name),
+                            CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              child: Icon(CupertinoIcons.trash, size: 20, color: CupertinoColors.systemRed),
+                              onPressed: () => _sil(guzergah.id),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           )
         ],
       ),
@@ -345,26 +337,28 @@ class HaftasonuSecici extends StatelessWidget {
 }
 
 // --- GÜZERGAH SEÇİM WIDGET'I ---
+// araclar_page.dart dosyasının en üstlerine, diğer widget'ların yanına
+
 class GuzergahSecici extends StatelessWidget {
-  final List<String> guzergahlar;
-  final String seciliGuzergah;
-  final ValueChanged<String> onGuzergahSecildi;
+  final List<GuzergahModel> guzergahlar;
+  final int? seciliGuzergahId; // Artık ID alıyor
+  final ValueChanged<int> onGuzergahSecildi; // Artık ID döndürüyor
   final bool isEditing;
 
   const GuzergahSecici({
     Key? key,
     required this.guzergahlar,
-    required this.seciliGuzergah,
+    required this.seciliGuzergahId,
     required this.onGuzergahSecildi,
     required this.isEditing,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = isEditing 
-        ? CupertinoColors.systemOrange 
+    final Color activeColor = isEditing
+        ? CupertinoColors.systemOrange
         : CupertinoTheme.of(context).primaryColor;
-        
+
     if (guzergahlar.isEmpty) {
       return Container(
         height: 80,
@@ -375,7 +369,8 @@ class GuzergahSecici extends StatelessWidget {
         ),
         child: Text(
           'Lütfen önce güzergah ekleyin.',
-          style: TextStyle(color: CupertinoColors.secondaryLabel.resolveFrom(context)),
+          style: TextStyle(
+              color: CupertinoColors.secondaryLabel.resolveFrom(context)),
         ),
       );
     }
@@ -390,17 +385,19 @@ class GuzergahSecici extends StatelessWidget {
         itemCount: guzergahlar.length,
         itemBuilder: (context, index) {
           final guzergah = guzergahlar[index];
-          final isSelected = guzergah == seciliGuzergah;
+          final isSelected = guzergah.id == seciliGuzergahId; // Karşılaştırma ID ile yapılıyor
 
           return GestureDetector(
-            onTap: () => onGuzergahSecildi(guzergah),
+            onTap: () => onGuzergahSecildi(guzergah.id), // Geriye ID döndürülüyor
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
               width: 130,
               margin: const EdgeInsets.symmetric(horizontal: 6.0),
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              transform: isSelected ? (Matrix4.identity()..scale(1.01)) : Matrix4.identity(),
+              transform: isSelected
+                  ? (Matrix4.identity()..scale(1.01))
+                  : Matrix4.identity(),
               transformAlignment: Alignment.center,
               decoration: BoxDecoration(
                 color: CupertinoTheme.of(context).barBackgroundColor,
@@ -412,7 +409,6 @@ class GuzergahSecici extends StatelessWidget {
                   width: isSelected ? 1.5 : 1.5,
                 ),
               ),
-              // --- DÜZELTME: Kaybolan içerik geri eklendi ---
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -425,13 +421,14 @@ class GuzergahSecici extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    guzergah,
+                    guzergah.name, // İsim gösteriliyor
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected
                           ? activeColor
                           : CupertinoTheme.of(context).textTheme.textStyle.color,
@@ -455,14 +452,14 @@ class AraclarPage extends StatefulWidget {
 
 class _AraclarPageState extends State<AraclarPage> {
   // ... diğer değişkenler ...
-  List<String> guzergahlar = [];
+  List<GuzergahModel> guzergahlar = []; // Artık GuzergahModel listesi tutuyoruz
+  int? seciliGuzergahId; // Artık seçili güzergahın ID'sini tutuyoruz
   List<AracModel> araclar = [];
   int? _duzenlenenIndex;
 
   final TextEditingController plakaController = TextEditingController();
   final TextEditingController kmBaslangicController = TextEditingController();
   final TextEditingController kmAralikController = TextEditingController();
-  String seciliGuzergah = '';
   String haftasonuDurumu = 'Çalışıyor';
   
   final List<String> _markalar = ['Mercedes', 'Ford', 'Fiat', 'Renault', 'Volkswagen', 'Peugeot', 'Diğer'];
@@ -489,131 +486,169 @@ class _AraclarPageState extends State<AraclarPage> {
     await _loadAraclar();
   }
 
-  Future<void> _saveAracList() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = araclar.map((e) => e.toJson()).toList();
-    await prefs.setStringList('araclar', jsonList);
-  }
-
   Future<void> _loadGuzergahlar() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      guzergahlar = prefs.getStringList('guzergahlar') ?? [];
-      if (guzergahlar.isNotEmpty) {
-        if (seciliGuzergah.isEmpty || !guzergahlar.contains(seciliGuzergah)){
-           seciliGuzergah = guzergahlar.first;
-        }
-      } else {
-        seciliGuzergah = '';
+  final dbHelper = DatabaseHelper.instance;
+  final guzergahListesi = await dbHelper.getAllGuzergahlar();
+  setState(() {
+    guzergahlar = guzergahListesi;
+    // Eğer seçili bir güzergah yoksa veya seçili olan ID listede yoksa, listenin ilk elemanını seç
+    if (guzergahlar.isNotEmpty) {
+      if (seciliGuzergahId == null || !guzergahlar.any((g) => g.id == seciliGuzergahId)) {
+        seciliGuzergahId = guzergahlar.first.id;
       }
-    });
+    } else {
+      seciliGuzergahId = null;
+    }
+  });
   }
 
   Future<void> _loadAraclar() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> aracJsonList = prefs.getStringList('araclar') ?? [];
+  final dbHelper = DatabaseHelper.instance;
+  final aracListesi = await dbHelper.getAllAraclar(); // Veritabanından oku
+  if (mounted) {
     setState(() {
-      araclar = aracJsonList.map((e) => AracModel.fromJson(e)).toList();
+      araclar = aracListesi;
     });
   }
+  }
 
-  Future<void> _saveOrUpdateArac() async {
-    HapticFeedback.lightImpact();
-    if (plakaController.text.isEmpty ||
-        kmBaslangicController.text.isEmpty ||
-        kmAralikController.text.isEmpty ||
-        (guzergahlar.isNotEmpty && seciliGuzergah.isEmpty) ) {
-          showCupertinoDialog(context: context, builder: (context) => CupertinoAlertDialog(
-            title: Text('Eksik Bilgi'),
-            content: Text('Lütfen tüm alanları doldurun.'),
-            actions: [CupertinoDialogAction(isDefaultAction: true, child: Text('Tamam'), onPressed: () => Navigator.of(context).pop())],
-          ));
-          return;
-        }
+  // araclar_page.dart
 
-    final bool isUpdating = _duzenlenenIndex != null;
+  // araclar_page.dart -> _AraclarPageState sınıfının içi
 
-    final arac = AracModel(
+Future<void> _saveOrUpdateArac() async {
+  HapticFeedback.lightImpact();
+  // GÜNCELLENDİ: seciliGuzergah.isEmpty yerine seciliGuzergahId == null kontrolü
+  if (plakaController.text.isEmpty ||
+      kmBaslangicController.text.isEmpty ||
+      kmAralikController.text.isEmpty ||
+      (guzergahlar.isNotEmpty && seciliGuzergahId == null)) {
+    showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+              title: Text('Eksik Bilgi'),
+              content: Text('Lütfen tüm alanları doldurun.'),
+              actions: [
+                CupertinoDialogAction(
+                    isDefaultAction: true,
+                    child: Text('Tamam'),
+                    onPressed: () => Navigator.of(context).pop())
+              ],
+            ));
+    return;
+  }
+
+  final bool isUpdating = _duzenlenenIndex != null;
+  final dbHelper = DatabaseHelper.instance;
+
+  if (isUpdating) {
+    // GÜNCELLEME
+    final aracToUpdate = araclar[_duzenlenenIndex!];
+    final guncellenmisArac = AracModel(
+      id: aracToUpdate.id,
       plaka: plakaController.text.trim(),
-      guzergah: seciliGuzergah,
+      guzergahId: seciliGuzergahId!, // GÜNCELLENDİ
       gunBasiKm: double.tryParse(kmBaslangicController.text.trim()) ?? 0,
       kmAralik: kmAralikController.text.trim(),
       haftasonuDurumu: haftasonuDurumu,
       marka: seciliMarka,
     );
+    await dbHelper.update(guncellenmisArac);
+  } else {
+    // YENİ EKLEME
+    final yeniArac = AracModel(
+      plaka: plakaController.text.trim(),
+      guzergahId: seciliGuzergahId!, // GÜNCELLENDİ
+      gunBasiKm: double.tryParse(kmBaslangicController.text.trim()) ?? 0,
+      kmAralik: kmAralikController.text.trim(),
+      haftasonuDurumu: haftasonuDurumu,
+      marka: seciliMarka,
+    );
+    await dbHelper.insert(yeniArac);
+  }
 
-    setState(() {
-      if (isUpdating) {
-        araclar[_duzenlenenIndex!] = arac;
-      } else {
-        araclar.add(arac);
-      }
-      _duzenlenenIndex = null;
-      plakaController.clear();
-      kmBaslangicController.clear();
-      kmAralikController.clear();
-      if (guzergahlar.isNotEmpty) seciliGuzergah = guzergahlar.first;
-      if (_markalar.isNotEmpty) seciliMarka = _markalar.first;
-    });
+  // Formu temizle
+  setState(() {
+    _duzenlenenIndex = null;
+    plakaController.clear();
+    kmBaslangicController.clear();
+    kmAralikController.clear();
+    if (guzergahlar.isNotEmpty) seciliGuzergahId = guzergahlar.first.id;
+    if (_markalar.isNotEmpty) seciliMarka = _markalar.first;
+    haftasonuDurumu = 'Çalışıyor';
+  });
 
-    await _saveAracList();
+  // Listeyi veritabanından yeniden yükle
+  await _loadAraclar();
 
-    if (mounted) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: Text(isUpdating ? 'Başarıyla Güncellendi' : 'Başarıyla Kaydedildi'),
-          content: Text(isUpdating ? 'Araç bilgileri güncellendi.' : 'Yeni araç başarıyla eklendi.'),
-          actions: [
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              child: Text('Tamam'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            )
-          ],
-        ),
+  // Başarı mesajını göster
+  if (mounted) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title:
+            Text(isUpdating ? 'Başarıyla Güncellendi' : 'Başarıyla Kaydedildi'),
+        content: Text(isUpdating
+            ? 'Araç bilgileri güncellendi.'
+            : 'Yeni araç başarıyla eklendi.'),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: Text('Tamam'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          )
+        ],
+      ),
+    );
+  }
+}
+  
+  // araclar_page.dart -> _AraclarPageState sınıfının içi
+
+void _editArac(int index) {
+  final arac = araclar[index];
+  setState(() {
+    _duzenlenenIndex = index;
+    plakaController.text = arac.plaka;
+    kmBaslangicController.text = arac.gunBasiKm.toString();
+    kmAralikController.text = arac.kmAralik;
+    haftasonuDurumu = arac.haftasonuDurumu;
+    seciliMarka = arac.marka;
+
+    // ESKİ: seciliGuzergah = arac.guzergah;
+    // YENİ:
+    seciliGuzergahId = arac.guzergahId;
+
+    // Aracın eski güzergahının ID'si mevcut güzergahlar listesinde var mı diye kontrol et.
+    // Eğer silinmişse, kullanıcıyı uyar ve ilk sıradakini seç.
+    if (!guzergahlar.any((g) => g.id == arac.guzergahId)) {
+      seciliGuzergahId = guzergahlar.isNotEmpty ? guzergahlar.first.id : null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Aracın eski güzergahı bulunamadı. Lütfen yeni bir tane seçin.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      });
+    }
+  });
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
       );
     }
-  }
-  
-  void _editArac(int index){
-    final arac = araclar[index];
-    setState(() {
-       _duzenlenenIndex = index;
-       plakaController.text = arac.plaka;
-       kmBaslangicController.text = arac.gunBasiKm.toString();
-       kmAralikController.text = arac.kmAralik;
-       haftasonuDurumu = arac.haftasonuDurumu;
-       seciliMarka = arac.marka;
+  });
+}
 
-       if (guzergahlar.contains(arac.guzergah)) {
-         seciliGuzergah = arac.guzergah;
-       } else {
-         seciliGuzergah = guzergahlar.isNotEmpty ? guzergahlar.first : '';
-         WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Aracın eski güzergahı bulunamadı. Lütfen yeni bir tane seçin.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-         });
-       }
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
+  // BU METODU GÜNCELLE
   void _cancelEditing() {
     HapticFeedback.lightImpact();
     setState(() {
@@ -621,11 +656,17 @@ class _AraclarPageState extends State<AraclarPage> {
       plakaController.clear();
       kmBaslangicController.clear();
       kmAralikController.clear();
-      if (guzergahlar.isNotEmpty) seciliGuzergah = guzergahlar.first;
-      if (_markalar.isNotEmpty) seciliMarka = _markalar.first;
+      if (guzergahlar.isNotEmpty) {
+        seciliGuzergahId = guzergahlar.first.id; // DOĞRUSU BU
+      }
+      if (_markalar.isNotEmpty) {
+        seciliMarka = _markalar.first;
+      }
       haftasonuDurumu = 'Çalışıyor';
     });
   }
+
+  // araclar_page.dart
 
   Future<void> _aracSil(int index) async {
     final arac = araclar[index];
@@ -633,7 +674,8 @@ class _AraclarPageState extends State<AraclarPage> {
       context: context,
       builder: (context) => CupertinoAlertDialog(
         title: Text('Aracı Sil'),
-        content: Text('"${arac.plaka}" plakalı aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
+        content: Text(
+            '"${arac.plaka}" plakalı aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
         actions: [
           CupertinoDialogAction(
             child: Text('İptal'),
@@ -642,12 +684,11 @@ class _AraclarPageState extends State<AraclarPage> {
           CupertinoDialogAction(
             isDestructiveAction: true,
             child: Text('Sil'),
-            onPressed: () {
-              setState(() {
-                araclar.removeAt(index);
-              });
-              _saveAracList();
-              Navigator.of(context).pop();
+            onPressed: () async {
+              final dbHelper = DatabaseHelper.instance;
+              await dbHelper.delete(arac.id!); // Veritabanından sil
+              Navigator.of(context).pop();     // Diyaloğu kapat
+              await _loadAraclar();             // Listeyi yenile
             },
           ),
         ],
@@ -688,32 +729,34 @@ class _AraclarPageState extends State<AraclarPage> {
   }
 
   // --- METOT GÜNCELLENDİ: Yeni ve güçlü diyaloğu gösterir ---
-  Future<void> _guzergahYonetimDialogGoster() async {
-    // Diyalog kapandığında güncellenmiş listeyi geri al
-    await showCupertinoDialog(
-      context: context,
-      builder: (context) {
-        return CupertinoAlertDialog(
-          title: Text('Güzergahları Yönet'),
-          content: GuzergahYonetimDialog(
-            initialGuzergahlar: guzergahlar,
-            aracListesi: araclar,
-          ),
-          actions: [
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              child: Text('Bitti'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Diyalog kapandıktan sonra ana sayfadaki güzergah listesini yenile
-                _loadGuzergahlar();
-              },
-            )
-          ],
-        );
-      },
-    );
-  }
+  // araclar_page.dart -> _AraclarPageState sınıfının içi
+
+Future<void> _guzergahYonetimDialogGoster() async {
+  await showCupertinoDialog(
+    context: context,
+    builder: (context) {
+      return CupertinoAlertDialog(
+        title: Text('Güzergahları Yönet'),
+        content: GuzergahYonetimDialog(
+          onGuzergahlarChanged: () {
+            // Diyalog içinde bir değişiklik olduğunda bu metot tetiklenecek
+            // ve ana sayfadaki güzergah listesini yenileyecek.
+            _loadGuzergahlar();
+          },
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: Text('Bitti'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          )
+        ],
+      );
+    },
+  );
+}
   
   @override
   Widget build(BuildContext context) {
@@ -910,11 +953,11 @@ class _AraclarPageState extends State<AraclarPage> {
                         // Yeni Güzergah Seçim Widget'ı
                         GuzergahSecici(
                           guzergahlar: guzergahlar,
-                          seciliGuzergah: seciliGuzergah,
-                          isEditing: _duzenlenenIndex != null, // <-- EKLENDİ
-                          onGuzergahSecildi: (yeniGuzergah) {
+                          seciliGuzergahId: seciliGuzergahId,
+                          isEditing: _duzenlenenIndex != null,
+                          onGuzergahSecildi: (yeniGuzergahId) { // Gelen değer artık int (ID)
                             setState(() {
-                              seciliGuzergah = yeniGuzergah;
+                              seciliGuzergahId = yeniGuzergahId; // State'i yeni ID ile güncelle
                             });
                           },
                         ),
@@ -1011,7 +1054,11 @@ class _AraclarPageState extends State<AraclarPage> {
                   physics: NeverScrollableScrollPhysics(),
                   itemCount: araclar.length,
                   itemBuilder: (context, index) {
-                    final a = araclar[index];
+                    final arac = araclar[index];
+                    final guzergah = guzergahlar.firstWhere(
+                      (g) => g.id == arac.guzergahId, 
+                      orElse: () => GuzergahModel(id: 0, name: "Bilinmiyor"),
+                      );
                     return AnimationConfiguration.staggeredList(
                       position: index,
                       duration: const Duration(milliseconds: 375),
@@ -1019,7 +1066,8 @@ class _AraclarPageState extends State<AraclarPage> {
                         verticalOffset: 50.0,
                         child: FadeInAnimation(
                           child: AracKarti(
-                            arac: a,
+                            arac: arac,
+                            guzergahAdi: guzergah.name,
                             onEdit: () => _editArac(index),
                             onDelete: () => _aracSil(index),
                           ),

@@ -6,10 +6,12 @@ class AracKarti extends StatelessWidget {
   final AracModel arac;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final String guzergahAdi;
 
   const AracKarti({
     super.key,
     required this.arac,
+    required this.guzergahAdi,
     required this.onEdit,
     required this.onDelete,
   });
@@ -107,7 +109,7 @@ class AracKarti extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: arac.guzergah),
+                                  _buildInfoRow(context, icon: CupertinoIcons.map_pin_ellipse, text: guzergahAdi),
                                   const SizedBox(height: 12),
                                   _buildInfoRow(context, icon: CupertinoIcons.tag, text: arac.marka),
                                 ],
